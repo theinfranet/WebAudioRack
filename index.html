@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebAudioRack — Eurorack de Web Audio API</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/design-system.css" />
+  <link rel="stylesheet" href="css/rack.css" />
+</head>
+<body>
+  <div id="app">
+    <div class="toolbar">
+      <div class="toolbar__brand"><span class="dot"></span>Web<span>Audio</span>Rack</div>
+      <div class="add-wrap">
+        <button id="addBtn" class="btn">+ Añadir módulo <kbd>↵</kbd></button>
+        <div id="addMenu" class="add-menu"></div>
+      </div>
+      <div class="tension-ctrl">
+        <span class="tiny-label">TENSIÓN</span>
+        <input id="tension" class="slider" type="range" min="0" max="100" value="30" />
+      </div>
+      <div class="toolbar__spacer"></div>
+      <div id="status" class="toolbar__status"></div>
+      <button id="power" class="power">○ OFF</button>
+    </div>
+
+    <div class="rack">
+      <div id="surface" class="rack-surface">
+        <svg id="cables" class="cable-layer"></svg>
+        <div id="hint" class="hint" style="transition:opacity 1s">
+          Pulsa <b>ON</b> para iniciar el audio · arrastra desde un <b>OUT</b> (verde) hacia un <b>IN</b> (azul) para cablear · clic en un cable para quitarlo
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- core -->
+  <script src="js/core/engine.js"></script>
+  <script src="js/core/patch.js"></script>
+  <script src="js/core/layout.js"></script>
+  <script src="js/core/module.js"></script>
+  <script src="js/core/rack.js"></script>
+  <!-- módulos -->
+  <script src="js/modules/sources.js"></script>
+  <script src="js/modules/processors.js"></script>
+  <script src="js/modules/mixers.js"></script>
+  <script src="js/modules/io.js"></script>
+  <!-- app -->
+  <script src="js/main.js"></script>
+</body>
+</html>

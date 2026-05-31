@@ -1,0 +1,362 @@
+/* ============================================================
+   WebAudioRack — Design System / UI Kit
+   Estética: oscura, plana, cuadrada (eurorack). Glow solo en LEDs.
+   ============================================================ */
+
+:root {
+  /* --- Paleta (negra, neutra, sin azul) --- */
+  --bg-app: #040404;
+  --bg-rack: #080808;
+  --bg-rail: #000;
+
+  --panel-1: #111111;
+  --panel-2: #151515;
+  --panel-edge: #242424;
+  --panel-line: #000;
+  --panel-screw: #393939;
+
+  --ink: #e2e2e2;
+  --ink-dim: #8a8a8a;
+  --ink-faint: #545454;
+
+  --accent: #36d39a;      /* verde señal (LED / OUT) */
+  --accent-amber: #ffb13d;
+  --accent-4: #ffd23d;
+  --danger: #ff4d5e;
+
+  --metal: #909090;       /* anillo de jack, neutro */
+  --metal-dark: #444444;
+
+  /* --- Tipografía --- */
+  --font-ui: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", ui-monospace, monospace;
+
+  /* --- Métricas eurorack (cuadrado) --- */
+  --hp: 16px;
+  --radius: 2px;
+  --shadow-panel: 0 1px 0 #000, 0 0 0 1px #000;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  background: var(--bg-app);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* ============================================================
+   PANEL DE MÓDULO — plano y rectangular
+   ============================================================ */
+.module {
+  position: absolute;
+  width: 150px;
+  background: var(--panel-1);
+  border: 1px solid var(--panel-edge);
+  border-top-color: #2e2e2e;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-panel);
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  z-index: 2;
+}
+.module.selected { outline: 1px solid var(--accent); outline-offset: 1px; }
+
+.module__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  cursor: grab;
+  border-bottom: 1px solid var(--panel-line);
+  background: var(--panel-2);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.module__header:active { cursor: grabbing; }
+.module__title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.module__close {
+  width: 15px; height: 15px;
+  border-radius: 2px;
+  border: 1px solid var(--panel-line);
+  background: #1a1a1a;
+  color: var(--ink-faint);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  display: grid; place-items: center;
+}
+.module__close:hover { background: var(--danger); color: #fff; }
+
+.module__body {
+  padding: 10px 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+/* tornillos eurorack */
+.module__screw {
+  position: absolute;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--panel-screw);
+  box-shadow: inset 0 0 0 1px #000;
+}
+.module__screw::after {
+  content: ""; position: absolute; inset: 1px;
+  background: linear-gradient(45deg, transparent 44%, #1a1a1a 44% 56%, transparent 56%);
+}
+.module__screw.tl { top: 3px; left: 3px; }
+.module__screw.tr { top: 3px; right: 3px; }
+.module__screw.bl { bottom: 3px; left: 3px; }
+.module__screw.br { bottom: 3px; right: 3px; }
+
+/* filas / rejillas */
+.row { display: flex; gap: 8px; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
+.row.between { justify-content: space-between; }
+.col { display: flex; flex-direction: column; gap: 8px; }
+.group {
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  padding: 8px 6px 6px;
+  position: relative;
+}
+.group__label {
+  position: absolute; top: -7px; left: 6px;
+  background: var(--panel-1);
+  padding: 0 5px;
+  font-size: 8px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ============================================================
+   KNOB — plano, sin glow
+   ============================================================ */
+.knob {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 48px;
+}
+.knob__dial {
+  --size: 38px;
+  width: var(--size); height: var(--size);
+  position: relative;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.knob__face {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: #1e1e1e;
+  border: 1px solid #000;
+  box-shadow: inset 0 0 0 1px #2a2a2a;
+}
+.knob__face::after {            /* tapa central plana */
+  content: ""; position: absolute; inset: 30%;
+  border-radius: 50%;
+  background: #121212;
+  border: 1px solid #000;
+}
+.knob__indicator {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 2.5px; height: 44%;
+  background: var(--ink);
+  border-radius: 1px;
+  transform-origin: 50% 100%;
+  transform: translate(-50%, -100%) rotate(0deg);
+}
+.knob__label {
+  font-size: 8.5px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  text-align: center;
+  line-height: 1.1;
+}
+.knob__value {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  color: var(--ink-faint);
+  min-height: 10px;
+}
+.knob.bipolar .knob__indicator { background: var(--accent-amber); }
+
+/* ============================================================
+   LED — único elemento con glow
+   ============================================================ */
+.led {
+  --c: var(--accent);
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #141414;
+  box-shadow: inset 0 0 0 1px #000;
+  position: relative;
+  flex: 0 0 auto;
+}
+.led::after {
+  content: "";
+  position: absolute; inset: 1px;
+  border-radius: 50%;
+  background: var(--c);
+  opacity: var(--lit, 0);
+  box-shadow: 0 0 calc(3px + var(--lit,0) * 9px) var(--c);
+  transition: opacity .03s linear;
+}
+.led.amber { --c: var(--accent-amber); }
+.led.red   { --c: var(--danger); }
+
+.led-row { display: flex; gap: 3px; align-items: center; }
+
+/* ============================================================
+   PANTALLA / SCREEN — marco cuadrado, sin glow externo
+   ============================================================ */
+.screen {
+  background: #04060500;
+  background-color: #040404;
+  border: 1px solid #000;
+  border-radius: 1px;
+  box-shadow: inset 0 0 0 1px #161616;
+  overflow: hidden;
+  position: relative;
+}
+.screen canvas { display: block; width: 100%; height: 100%; }
+.screen__readout {
+  font-family: var(--font-mono);
+  color: var(--accent);
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+/* ============================================================
+   JACK — anillo metálico neutro
+   ============================================================ */
+.port {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 40px;
+}
+.jack {
+  width: 21px; height: 21px;
+  border-radius: 50%;
+  background: #161616;
+  border: 2px solid var(--metal);
+  display: grid; place-items: center;
+  cursor: crosshair;
+  position: relative;
+  transition: transform .07s ease;
+}
+.jack::after {
+  content: "";
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #040404;
+  box-shadow: inset 0 1px 1px #000;
+}
+.jack:hover { transform: scale(1.1); }
+.jack.is-output { border-color: var(--accent); }
+.jack.is-input  { border-color: var(--metal); }
+.jack.connected { border-color: #cfd3da; }
+.jack.target-ok { box-shadow: 0 0 0 2px var(--accent); transform: scale(1.15); }
+.jack.target-bad { box-shadow: 0 0 0 2px var(--danger); }
+
+.port__label {
+  font-size: 7.5px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  text-align: center;
+  line-height: 1;
+}
+.port__act { width: 7px; height: 7px; margin-top: 1px; }
+
+/* ============================================================
+   BOTONES / SELECTS / FADERS — planos y cuadrados
+   ============================================================ */
+.btn {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  background: #1a1a1a;
+  border: 1px solid #000;
+  border-top: 1px solid #2a2a2a;
+  border-radius: 2px;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+.btn:hover { color: var(--accent); border-color: var(--metal-dark); }
+.btn:active { transform: translateY(1px); }
+.btn.active { background: var(--accent); color: #061410; border-color: #000; }
+.btn.wide { width: 100%; }
+
+.sel {
+  font-family: var(--font-ui);
+  font-size: 9.5px;
+  color: var(--ink);
+  background: #0e0e0e;
+  border: 1px solid #000;
+  border-radius: 2px;
+  padding: 4px 6px;
+  width: 100%;
+  cursor: pointer;
+}
+.sel:focus { outline: 1px solid var(--metal-dark); }
+
+.switch-wave { display: flex; gap: 2px; }
+.switch-wave button {
+  flex: 1;
+  background: #0e0e0e;
+  border: 1px solid #000;
+  color: var(--ink-faint);
+  border-radius: 2px;
+  padding: 4px 0;
+  cursor: pointer;
+  display: grid; place-items: center;
+}
+.switch-wave button.active { color: var(--accent); border-color: var(--metal-dark); background: #141414; }
+.switch-wave svg { width: 16px; height: 12px; }
+
+.fader-v {
+  -webkit-appearance: none; appearance: none;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 22px; height: 90px;
+  background: transparent;
+  cursor: ns-resize;
+}
+.fader-v::-webkit-slider-runnable-track {
+  width: 5px; background: #090909; border-radius: 1px;
+  box-shadow: inset 0 0 0 1px #000;
+}
+.fader-v::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px; height: 11px;
+  background: #262626;
+  border: 1px solid #000; border-radius: 1px;
+}
+
+.tiny-label {
+  font-size: 7.5px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-faint); text-align: center;
+}
