@@ -11,7 +11,7 @@ class VCA extends Module {
     const ctx = Engine.ctx;
     this.gain = ctx.createGain();
     this.gain.gain.value = 0.7;
-    this.addKnob(this.row(), { label: "GAIN", min: 0, max: 1.5, value: 0.7, onChange: (v) => (this.gain.gain.value = v) });
+    this.addKnob(this.row(), { label: "GAIN", min: 0, max: 1.5, value: 0.7, onChange: (v) => (this.gain.gain.value = v), param: this.gain.gain });
     const p = this.row(this.body, "between");
     this.addPort(p, "in", this.gain, { label: "IN" });
     this.addPort(p, "in", this.gain.gain, { label: "CV", kind: "cv" });
@@ -35,7 +35,7 @@ class VCF extends Module {
       "lowshelf", "highshelf", "peaking", "allpass",
     ], (v) => (this.f.type = v), "lowpass");
     const k = this.row();
-    this.addKnob(k, { label: "CUTOFF", min: 20, max: 18000, value: 1200, unit: "Hz", mapping: "exp", onChange: (v) => (this.f.frequency.value = v) });
+    this.addKnob(k, { label: "CUTOFF", min: 20, max: 18000, value: 1200, unit: "Hz", mapping: "exp", onChange: (v) => (this.f.frequency.value = v), param: this.f.frequency });
     this.addKnob(k, { label: "RESO", min: 0.1, max: 24, value: 6, mapping: "exp", onChange: (v) => (this.f.Q.value = v) });
     this.addKnob(this.row(), { label: "GAIN", min: -24, max: 24, value: 0, unit: "dB", bipolar: true, onChange: (v) => (this.f.gain.value = v) });
 
@@ -94,7 +94,7 @@ class Delay extends Module {
     this.delay.connect(this.wet).connect(this.out);
 
     const k = this.row();
-    this.addKnob(k, { label: "TIME", min: 0.001, max: 2, value: 0.3, unit: "s", mapping: "exp", onChange: (v) => (this.delay.delayTime.value = v) });
+    this.addKnob(k, { label: "TIME", min: 0.001, max: 2, value: 0.3, unit: "s", mapping: "exp", onChange: (v) => (this.delay.delayTime.value = v), param: this.delay.delayTime });
     this.addKnob(k, { label: "FBK", min: 0, max: 0.95, value: 0.35, onChange: (v) => (this.fb.gain.value = v) });
     this.addKnob(this.row(), { label: "MIX", min: 0, max: 1, value: 0.5, onChange: (v) => { this.wet.gain.value = v; this.dry.gain.value = 1 - v * 0.6; } });
 
@@ -189,7 +189,7 @@ class Panner extends Module {
     super({ title: "STEREO PAN", width: 140, ...def });
     const ctx = Engine.ctx;
     this.p = ctx.createStereoPanner();
-    this.addKnob(this.row(), { label: "PAN", min: -1, max: 1, value: 0, bipolar: true, format: (v) => (v === 0 ? "C" : (v < 0 ? "L" : "R") + Math.round(Math.abs(v) * 100)), onChange: (v) => (this.p.pan.value = v) });
+    this.addKnob(this.row(), { label: "PAN", min: -1, max: 1, value: 0, bipolar: true, format: (v) => (v === 0 ? "C" : (v < 0 ? "L" : "R") + Math.round(Math.abs(v) * 100)), onChange: (v) => (this.p.pan.value = v), param: this.p.pan });
     const pr = this.row(this.body, "between");
     this.addPort(pr, "in", this.p, { label: "IN" });
     this.addPort(pr, "in", this.p.pan, { label: "CV", kind: "cv" });

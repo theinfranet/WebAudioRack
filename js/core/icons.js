@@ -34,6 +34,10 @@ const ICONS = {
   player:  '<circle cx="12" cy="12" r="8"/><path d="M10 8.5 L16 12 L10 15.5 Z"/>',
   recorder:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/>',
   listener:'<path d="M10 20 a7 7 0 1 1 4 0"/><path d="M15 8 a4 4 0 0 1 0 8 M18 5 a8 8 0 0 1 0 14"/>',
+  mult:    '<circle cx="4" cy="12" r="1.6"/><path d="M5 12 H10 M10 12 L19 5 M10 12 H19 M10 12 L19 19"/>',
+  clock:   '<circle cx="12" cy="12" r="8"/><path d="M12 8 V12 L15 14"/>',
+  quant:   '<path d="M3 18 H7 V14 H11 V10 H15 V6 H20"/>',
+  vscope:  '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M12 7 L17 12 L12 17 L7 12 Z"/>',
 };
 
 window.ICONS = ICONS;

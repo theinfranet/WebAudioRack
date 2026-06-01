@@ -5,10 +5,18 @@
 
 class MixerBase extends Module {
   constructor(channels, def) {
-    super({ title: channels + " CH MIXER", width: 26 + channels * 52 + 66, ...def });
+    super({ title: channels + " CH MIXER", width: 26 + channels * 52 + 110, ...def });
     const ctx = Engine.ctx;
     this.master = ctx.createGain();
     this.master.gain.value = 0.8;
+
+    // Split master estéreo en L y R para exponer salidas separadas
+    this.split = ctx.createChannelSplitter(2);
+    this.outL = ctx.createGain();
+    this.outR = ctx.createGain();
+    this.master.connect(this.split);
+    this.split.connect(this.outL, 0);
+    this.split.connect(this.outR, 1);
 
     const strip = this.row();
     strip.className = "row mix-strip";
@@ -40,7 +48,8 @@ class MixerBase extends Module {
     const mt = document.createElement("div"); mt.className = "tiny-label"; mt.textContent = "MAIN"; m.appendChild(mt);
     this.addFader(m, { min: 0, max: 1.4, value: 0.8, onChange: (v) => (this.master.gain.value = v) });
     const pr = document.createElement("div"); pr.className = "row"; m.appendChild(pr);
-    this.addPort(pr, "out", this.master, { label: "OUT" });
+    this.addPort(pr, "out", this.outL, { label: "L" });
+    this.addPort(pr, "out", this.outR, { label: "R" });
     strip.appendChild(m);
   }
 }

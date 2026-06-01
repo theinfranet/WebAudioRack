@@ -36,7 +36,7 @@ class Scope extends Module {
   draw() {
     const { ctx, w, h } = this.sc;
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = "#060a08"; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, w, h);
     ctx.strokeStyle = "rgba(46,230,166,.12)"; ctx.lineWidth = 1;
     for (let x = 0; x <= w; x += w / 4) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
     for (let y = 0; y <= h; y += h / 4) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
@@ -84,7 +84,7 @@ class Output extends Module {
     this.split.connect(this.anR, 1);
 
     // selector de interfaz de salida (setSinkId)
-    this.devSel = this.addSelect(this.row(), [{ value: "", label: "Salida por defecto" }], (id) => Engine.setSinkId(id), "");
+    this.devSel = this.addSelect(this.row(), [{ value: "", label: "Salida por defecto" }], (id) => Engine.setSinkId(id), "", { persist: false });
     this._refreshDevices();
     if (navigator.mediaDevices) navigator.mediaDevices.ondevicechange = () => this._refreshDevices();
 

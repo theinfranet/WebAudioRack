@@ -1,0 +1,314 @@
+/* ============================================================
+   WebAudioRack — Temas por módulo
+   Cada .module.theme-<id> repinta panel, header, knobs, screen
+   y jacks. El tema por defecto (eurorack negro) es la ausencia
+   de cualquier clase theme-*.
+   ============================================================ */
+
+/* ----------------------------- 06 · Acero cepillado ---------- */
+.module.theme-steel {
+  background:
+    repeating-linear-gradient(180deg, #5a5a5a 0px, #6a6a6a 2px, #5a5a5a 4px),
+    #5a5a5a;
+  border: 1px solid #2a2a2a;
+  box-shadow: 0 1px 0 #000, inset 0 1px 0 rgba(255,255,255,.18);
+}
+.module.theme-steel .module__header {
+  background: linear-gradient(180deg, #6a6a6a, #4a4a4a);
+  border-bottom: 1px solid #2a2a2a;
+}
+.module.theme-steel .module__title { color: #0a0a0a; }
+.module.theme-steel .module__icon { color: #1a1a1a; }
+.module.theme-steel .module__screw {
+  background: radial-gradient(circle at 30% 30%, #d0d0d0, #707070 70%, #2a2a2a 100%);
+  box-shadow: inset 0 0 0 1px #000;
+}
+.module.theme-steel .knob__face {
+  background: radial-gradient(circle at 35% 30%, #2a2a2a, #050505);
+  box-shadow: inset 0 0 0 1px #555;
+}
+.module.theme-steel .knob__face::after { background: #050505; }
+.module.theme-steel .knob__indicator { background: #f0f0f0; }
+.module.theme-steel .knob__label { color: #0a0a0a; }
+.module.theme-steel .knob__value { color: #222; }
+.module.theme-steel .screen { background: #0a0a0a; box-shadow: inset 0 0 0 1px #2a2a2a; }
+.module.theme-steel .screen__readout { color: var(--accent); }
+.module.theme-steel .jack { background: #1a1a1a; border-color: #2a2a2a; }
+.module.theme-steel .jack.is-output { border-color: var(--accent); }
+.module.theme-steel .port__label { color: #1a1a1a; }
+.module.theme-steel .group__label { background: #5a5a5a; color: #1a1a1a; }
+.module.theme-steel .group { border-color: #2a2a2a; }
+
+/* ----------------------------- 10 · Plata Doepfer ------------ */
+.module.theme-silver {
+  background: #b8b6b0;
+  border: 1px solid #4a4a45;
+  box-shadow: 0 1px 0 #000;
+}
+.module.theme-silver .module__header {
+  background: #aeaca6;
+  border-bottom: 1px solid #707070;
+}
+.module.theme-silver .module__title { color: #0a0a0a; font-weight: 400; letter-spacing: .14em; }
+.module.theme-silver .module__icon { color: #2a2a2a; }
+.module.theme-silver .module__screw {
+  background: radial-gradient(circle at 30% 30%, #e0ddd5, #8a8782 70%, #2a2a2a 100%);
+  box-shadow: inset 0 0 0 1px #2a2a2a;
+}
+.module.theme-silver .knob__face { background: #2a2a2a; box-shadow: inset 0 0 0 1px #555; }
+.module.theme-silver .knob__face::after { background: #1a1a1a; }
+.module.theme-silver .knob__indicator { background: #c4c4c4; }
+.module.theme-silver .knob__label { color: #0a0a0a; }
+.module.theme-silver .knob__value { color: #333; }
+.module.theme-silver .screen { background: #1a1a1a; box-shadow: inset 0 0 0 1px #4a4a4a; }
+.module.theme-silver .screen__readout { color: #ff9d4a; }
+.module.theme-silver .jack { background: #1a1a1a; border-color: #555; }
+.module.theme-silver .jack.is-output { border-color: var(--accent); }
+.module.theme-silver .port__label { color: #1a1a1a; }
+.module.theme-silver .group { border-color: #707070; }
+.module.theme-silver .group__label { background: #b8b6b0; color: #1a1a1a; }
+
+/* ----------------------------- 13 · Soft dark card ------------ */
+.module.theme-soft {
+  background: #161616;
+  border: 1px solid #222;
+  border-radius: 6px;
+  box-shadow: 0 1px 0 rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.04);
+}
+.module.theme-soft .module__header {
+  background: #1a1a1a;
+  border-bottom: 1px solid #222;
+  border-radius: 6px 6px 0 0;
+}
+.module.theme-soft .module__title { color: #c0c0c0; }
+.module.theme-soft .module__icon { color: #909090; }
+.module.theme-soft .module__screw { display: none; }
+.module.theme-soft .knob__face { background: #222; box-shadow: inset 0 0 0 1px #2a2a2a; }
+.module.theme-soft .knob__face::after { background: #161616; }
+.module.theme-soft .knob__indicator { background: #d4d4d4; }
+.module.theme-soft .knob__label { color: #c0c0c0; }
+.module.theme-soft .knob__value { color: #808080; }
+.module.theme-soft .screen { background: #0a0a0a; border-radius: 4px; box-shadow: inset 0 0 0 1px #222; }
+.module.theme-soft .screen__readout { color: #7eb4ff; }
+.module.theme-soft .jack { background: #0a0a0a; border-color: #555; }
+.module.theme-soft .jack.is-output { border-color: #7eb4ff; }
+.module.theme-soft .port__label { color: #888; }
+.module.theme-soft .group { border-color: #222; border-radius: 4px; }
+.module.theme-soft .group__label { background: #161616; color: #888; }
+
+/* ----------------------------- 14 · Wireframe ---------------- */
+.module.theme-wire {
+  background: transparent;
+  border: 1px solid #444;
+  border-radius: 0;
+  box-shadow: none;
+}
+.module.theme-wire .module__header {
+  background: transparent;
+  border-bottom: 1px dashed #444;
+}
+.module.theme-wire .module__title { color: #c8c8c8; }
+.module.theme-wire .module__icon { color: #888; }
+.module.theme-wire .module__screw { display: none; }
+.module.theme-wire .knob__face {
+  background: transparent;
+  border: 1px solid #444;
+  box-shadow: none;
+}
+.module.theme-wire .knob__face::after { background: transparent; border: 1px solid #444; }
+.module.theme-wire .knob__indicator { background: #d4d4d4; }
+.module.theme-wire .knob__label { color: #c8c8c8; }
+.module.theme-wire .knob__value { color: #888; }
+.module.theme-wire .screen {
+  background: transparent;
+  border: 1px dashed #444;
+  box-shadow: none;
+}
+.module.theme-wire .screen__readout { color: #c8c8c8; }
+.module.theme-wire .jack {
+  background: transparent;
+  border-color: #555;
+}
+.module.theme-wire .jack::after { background: transparent; box-shadow: inset 0 0 0 1px #444; }
+.module.theme-wire .jack.is-output { border-color: var(--accent); }
+.module.theme-wire .port__label { color: #c8c8c8; }
+.module.theme-wire .group { border-color: #444; }
+.module.theme-wire .group__label { background: transparent; color: #c8c8c8; }
+.module.theme-wire .jack-plate { background: transparent; border-color: #444; }
+
+/* ----------------------------- 19 · Fibra de carbono ---------- */
+.module.theme-carbon {
+  background:
+    repeating-linear-gradient(45deg, #0e0e0e 0px, #161616 2px, #0e0e0e 4px),
+    #0e0e0e;
+  border: 1px solid #050505;
+  box-shadow: 0 1px 0 #000;
+}
+.module.theme-carbon .module__header {
+  background: rgba(0,0,0,.4);
+  border-bottom: 1px solid #050505;
+}
+.module.theme-carbon .module__title { color: #c5c5c5; }
+.module.theme-carbon .module__icon { color: #909090; }
+.module.theme-carbon .module__screw {
+  background: radial-gradient(circle at 30% 30%, #6a6a6a, #2a2a2a 70%, #000 100%);
+  box-shadow: inset 0 0 0 1px #000;
+}
+.module.theme-carbon .knob__face {
+  background: radial-gradient(circle at 35% 30%, #2a2a2a, #050505);
+  box-shadow: inset 0 0 0 1px #2a2a2a;
+}
+.module.theme-carbon .knob__face::after { background: #050505; }
+.module.theme-carbon .knob__indicator { background: #d4d4d4; }
+.module.theme-carbon .knob__label { color: #c5c5c5; }
+.module.theme-carbon .knob__value { color: #888; }
+.module.theme-carbon .screen { background: #050505; box-shadow: inset 0 0 0 1px #222; }
+.module.theme-carbon .screen__readout { color: var(--accent); }
+.module.theme-carbon .jack { background: #050505; border-color: #707070; }
+.module.theme-carbon .jack.is-output { border-color: var(--accent); }
+.module.theme-carbon .port__label { color: #b0b0b0; }
+.module.theme-carbon .group { border-color: #222; }
+.module.theme-carbon .group__label { background: #0e0e0e; color: #b0b0b0; }
+
+/* ----------------------------- 12-aqua · Aqua glow fluor ------ */
+/* Variante de la opción "neón cian" pero en verde-agua fluorescente,
+   con halo emisivo en bordes y readouts. */
+.module.theme-aqua {
+  --aqua: #00ffc8;
+  background: #03100c;
+  border: 1px solid #0a2820;
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 1px rgba(0,255,200,.18),
+    0 0 10px rgba(0,255,200,.18),
+    inset 0 0 12px rgba(0,255,200,.06);
+}
+.module.theme-aqua .module__header {
+  background: #061a14;
+  border-bottom: 1px solid var(--aqua);
+  box-shadow: 0 0 6px rgba(0,255,200,.25);
+}
+.module.theme-aqua .module__title {
+  color: var(--aqua);
+  text-shadow: 0 0 4px rgba(0,255,200,.7);
+  letter-spacing: .18em;
+}
+.module.theme-aqua .module__icon { color: var(--aqua); filter: drop-shadow(0 0 2px rgba(0,255,200,.7)); }
+.module.theme-aqua .module__screw {
+  background: var(--aqua);
+  box-shadow: 0 0 6px rgba(0,255,200,.6), inset 0 0 0 1px #000;
+}
+.module.theme-aqua .module__screw::after { background: linear-gradient(45deg, transparent 44%, #03100c 44% 56%, transparent 56%); }
+.module.theme-aqua .knob__face {
+  background: #03100c;
+  border: 1px solid var(--aqua);
+  box-shadow: 0 0 6px rgba(0,255,200,.35), inset 0 0 6px rgba(0,255,200,.15);
+}
+.module.theme-aqua .knob__face::after { background: #03100c; border: 1px solid var(--aqua); box-shadow: inset 0 0 4px rgba(0,255,200,.3); }
+.module.theme-aqua .knob__indicator {
+  background: var(--aqua);
+  box-shadow: 0 0 4px rgba(0,255,200,.85);
+}
+.module.theme-aqua .knob__label {
+  color: var(--aqua);
+  text-shadow: 0 0 3px rgba(0,255,200,.6);
+}
+.module.theme-aqua .knob__value {
+  color: var(--aqua);
+  opacity: .85;
+}
+.module.theme-aqua .screen {
+  background: #02080660;
+  background-color: #020806;
+  box-shadow:
+    0 0 8px rgba(0,255,200,.3),
+    inset 0 0 0 1px var(--aqua),
+    inset 0 0 12px rgba(0,255,200,.15);
+}
+.module.theme-aqua .screen__readout {
+  color: var(--aqua);
+  text-shadow: 0 0 5px rgba(0,255,200,.8);
+}
+.module.theme-aqua .jack {
+  background: #020806;
+  border-color: var(--aqua);
+  box-shadow: 0 0 6px rgba(0,255,200,.35);
+}
+.module.theme-aqua .jack.is-output {
+  border-color: var(--aqua);
+  box-shadow: 0 0 10px rgba(0,255,200,.6);
+}
+.module.theme-aqua .jack-plate {
+  background: rgba(0,255,200,.05);
+  border-color: var(--aqua);
+  box-shadow: inset 0 0 4px rgba(0,255,200,.2);
+}
+.module.theme-aqua .port__label {
+  color: var(--aqua);
+  text-shadow: 0 0 3px rgba(0,255,200,.5);
+}
+.module.theme-aqua .group { border-color: var(--aqua); box-shadow: inset 0 0 6px rgba(0,255,200,.1); }
+.module.theme-aqua .group__label {
+  background: #03100c;
+  color: var(--aqua);
+  text-shadow: 0 0 3px rgba(0,255,200,.6);
+}
+
+/* ============================================================
+   Menú contextual de estilos
+   ============================================================ */
+.theme-menu {
+  position: fixed;
+  z-index: 9999;
+  min-width: 200px;
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  box-shadow: 0 6px 24px rgba(0,0,0,.6), 0 0 0 1px #000;
+  border-radius: 3px;
+  padding: 4px;
+  font-family: var(--font-ui);
+}
+.theme-menu__hd {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 6px 10px 4px;
+}
+.theme-menu__item {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-align: left;
+  padding: 7px 10px;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.theme-menu__item:hover { background: #161616; color: var(--ink); }
+.theme-menu__item.active { background: #131a17; color: var(--accent); }
+.theme-menu__item.active::after { content: "·"; margin-left: auto; }
+
+.theme-swatch {
+  width: 18px; height: 18px;
+  border-radius: 2px;
+  border: 1px solid #1a1a1a;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
+  flex: 0 0 auto;
+}
+.theme-swatch--default { background: #0a0a0a; }
+.theme-swatch--steel { background: repeating-linear-gradient(180deg, #5a5a5a 0px, #6a6a6a 1px, #5a5a5a 2px); }
+.theme-swatch--silver { background: #b8b6b0; border-color: #4a4a45; }
+.theme-swatch--soft { background: #161616; border-radius: 4px; }
+.theme-swatch--wire { background: transparent; border: 1px solid #888; }
+.theme-swatch--carbon { background: repeating-linear-gradient(45deg, #0e0e0e 0px, #1a1a1a 2px, #0e0e0e 3px); }
+.theme-swatch--aqua {
+  background: #03100c;
+  border: 1px solid #00ffc8;
+  box-shadow: 0 0 6px rgba(0,255,200,.7), inset 0 0 4px rgba(0,255,200,.4);
+}

@@ -18,8 +18,8 @@ class VCO extends Module {
 
     this.addWaveSwitch(this.row(), (t) => (this.osc.type = t), "sine");
     const k = this.row();
-    this.addKnob(k, { label: "FREQ", min: 16, max: 12000, value: 200, unit: "Hz", mapping: "exp", onChange: (v) => (this.osc.frequency.value = v) });
-    this.addKnob(k, { label: "FINE", min: -100, max: 100, value: 0, unit: "c", bipolar: true, onChange: (v) => (this.osc.detune.value = v) });
+    this.addKnob(k, { label: "FREQ", min: 16, max: 12000, value: 200, unit: "Hz", mapping: "exp", onChange: (v) => (this.osc.frequency.value = v), param: this.osc.frequency });
+    this.addKnob(k, { label: "FINE", min: -100, max: 100, value: 0, unit: "c", bipolar: true, onChange: (v) => (this.osc.detune.value = v), param: this.osc.detune });
     this.addKnob(this.row(), { label: "LEVEL", min: 0, max: 1, value: 0.5, onChange: (v) => (this.level.gain.value = v) });
 
     const p = this.row(this.body, "between");
@@ -46,7 +46,7 @@ class LFO extends Module {
 
     this.addWaveSwitch(this.row(), (t) => (this.osc.type = t), "sine");
     const k = this.row();
-    this.addKnob(k, { label: "RATE", min: 0.02, max: 40, value: 2, unit: "Hz", mapping: "exp", onChange: (v) => (this.osc.frequency.value = v) });
+    this.addKnob(k, { label: "RATE", min: 0.02, max: 40, value: 2, unit: "Hz", mapping: "exp", onChange: (v) => (this.osc.frequency.value = v), param: this.osc.frequency });
     this.addKnob(k, { label: "DEPTH", min: 0, max: 1, value: 1, onChange: (v) => (this.depth.gain.value = v) });
     this.actLed = this.addLED(this.row(), "amber");
 

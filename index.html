@@ -8,6 +8,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/design-system.css" />
   <link rel="stylesheet" href="css/rack.css" />
+  <link rel="stylesheet" href="css/module-themes.css" />
+  <link rel="stylesheet" href="css/sprint1.css" />
 </head>
 <body>
   <div id="app">
@@ -16,12 +18,22 @@
       <div class="add-wrap">
         <button id="addBtn" class="btn">+ Añadir módulo <kbd>↵</kbd></button>
       </div>
+      <div class="toolbar__actions">
+        <button id="btnSave" class="btn" title="Guardar patch en el navegador (Ctrl+S)">GUARDAR</button>
+        <button id="btnLoad" class="btn" title="Cargar el patch guardado">CARGAR</button>
+        <button id="btnExport" class="btn" title="Exportar a archivo .wapatch">EXPORT</button>
+        <button id="btnImport" class="btn" title="Importar un archivo .wapatch">IMPORT</button>
+        <span class="toolbar__div"></span>
+        <button id="btnUndo" class="btn ico" title="Deshacer (Ctrl+Z)">↶</button>
+        <button id="btnRedo" class="btn ico" title="Rehacer (Ctrl+Shift+Z)">↷</button>
+        <input id="importFile" type="file" accept=".wapatch,application/json,.json" hidden />
+      </div>
       <div class="tension-ctrl">
         <span class="tiny-label">TENSIÓN</span>
         <input id="tension" class="slider" type="range" min="0" max="100" value="30" />
       </div>
       <div class="cable-ctrl">
-        <button id="cableBtn" class="btn">CABLE <span id="cableDot" class="cable-dot"></span> ▾</button>
+        <button id="cableBtn" class="btn">CABLE ▾</button>
         <div id="cableMenu" class="cable-menu">
           <div class="cable-menu__head">Cajón de cables</div>
           <div id="cableList" class="cable-list"></div>
@@ -34,53 +46,27 @@
       </div>
       <button id="smoothBtn" class="btn" title="Movimiento suave del lienzo on/off">SUAVE: OFF</button>
       <div class="toolbar__spacer"></div>
-      <div id="status" class="toolbar__status"></div>
-      <button id="power" class="power">○ OFF</button>
-    </div>
 
-    <div class="perf-panel" id="perfPanel">
-      <div class="perf-stat" title="Estado del AudioContext">
-        <span class="perf-stat__lbl">ESTADO</span>
-        <span class="perf-stat__val"><span id="perfState" class="perf-pill">—</span></span>
-      </div>
-      <div class="perf-stat" title="Frecuencia de muestreo del AudioContext">
-        <span class="perf-stat__lbl">SR</span>
-        <span class="perf-stat__val" id="perfSR">—</span>
-      </div>
-      <div class="perf-stat" title="Latencia de salida reportada por la Web Audio API (base + output)">
-        <span class="perf-stat__lbl">LATENCIA</span>
-        <span class="perf-stat__val" id="perfLat">—</span>
-      </div>
-      <div class="perf-stat" title="Tiempo entre frames de la UI (objetivo aprox 16.7 ms a 60 fps)">
-        <span class="perf-stat__lbl">FRAME</span>
-        <span class="perf-stat__val" id="perfFrame">—</span>
-      </div>
-      <div class="perf-stat" title="Reloj del AudioContext en segundos. Avanza solo si el motor está procesando audio.">
-        <span class="perf-stat__lbl">CLOCK</span>
-        <span class="perf-stat__val" id="perfClock">—</span>
-      </div>
-      <div class="perf-stat" title="Módulos en el rack y cables conectados">
-        <span class="perf-stat__lbl">GRAFO</span>
-        <span class="perf-stat__val" id="perfGraph">—</span>
-      </div>
-      <div class="perf-meters" title="Nivel de salida master (L/R). Barra verde = RMS, marca blanca = pico.">
-        <div class="perf-meters__lbl">OUT</div>
-        <div class="perf-meters__rows">
-          <div class="perf-meter">
-            <span class="perf-meter__ch">L</span>
-            <div class="perf-meter__bar"><div id="perfRmsL" class="perf-meter__rms"></div><div id="perfPkL" class="perf-meter__peak"></div></div>
-            <span class="perf-meter__db" id="perfDbL">-inf</span>
-          </div>
-          <div class="perf-meter">
-            <span class="perf-meter__ch">R</span>
-            <div class="perf-meter__bar"><div id="perfRmsR" class="perf-meter__rms"></div><div id="perfPkR" class="perf-meter__peak"></div></div>
-            <span class="perf-meter__db" id="perfDbR">-inf</span>
-          </div>
+      <div class="hud" id="hud">
+        <div class="hud-stat" title="Carga estimada del hilo de UI (frame time / 16.7 ms). El navegador no expone CPU/GPU reales.">
+          <span class="hud-stat__lbl">CPU</span>
+          <span class="hud-stat__val" id="hudCpu">—</span>
+        </div>
+        <div class="hud-stat" title="Frecuencia de muestreo del AudioContext">
+          <span class="hud-stat__lbl">SR</span>
+          <span class="hud-stat__val" id="hudSR">—</span>
+        </div>
+        <div class="hud-stat" title="Latencia de salida (base + output) reportada por Web Audio">
+          <span class="hud-stat__lbl">LAT</span>
+          <span class="hud-stat__val" id="hudLat">—</span>
+        </div>
+        <div class="hud-stat" title="Reloj del AudioContext (segundos). Solo avanza si el motor está procesando.">
+          <span class="hud-stat__lbl">CLK</span>
+          <span class="hud-stat__val" id="hudClock">—</span>
         </div>
       </div>
-      <div class="perf-spectrum" title="Espectro del master: qué frecuencias se están enviando al destino de audio.">
-        <canvas id="perfSpec" width="280" height="44"></canvas>
-      </div>
+
+      <button id="power" class="power">○ OFF</button>
     </div>
 
     <div class="rack">
@@ -88,7 +74,8 @@
       <div id="surface" class="rack-surface">
         <svg id="cables" class="cable-layer"></svg>
       </div>
-      <div id="zoomBar" class="zoom-bar">
+      <div id="zoomBar" class="zoom-bar" title="Zoom del lienzo">
+        <div class="zoom-bar__lbl">ZOOM</div>
         <div id="zoomValue" class="zoom-bar__value">100%</div>
         <div id="zoomTrack" class="zoom-bar__track">
           <div id="zoomFill" class="zoom-bar__fill"></div>
@@ -110,12 +97,22 @@
   <script src="js/core/icons.js"></script>
   <script src="js/core/module.js"></script>
   <script src="js/core/rack.js"></script>
+  <script src="js/core/tooltips.js"></script>
+  <script src="js/core/themes.js"></script>
+  <!-- sprint 1: persistencia, historial, menú contextual, UI -->
+  <script src="js/core/ui.js"></script>
+  <script src="js/core/history.js"></script>
+  <script src="js/core/contextmenu.js"></script>
+  <script src="js/core/persistence.js"></script>
+  <script src="js/core/selection.js"></script>
+  <script src="js/core/minimap.js"></script>
   <!-- módulos -->
   <script src="js/modules/sources.js"></script>
   <script src="js/modules/processors.js"></script>
   <script src="js/modules/mixers.js"></script>
   <script src="js/modules/io.js"></script>
   <script src="js/modules/advanced.js"></script>
+  <script src="js/modules/utility.js"></script>
   <!-- app -->
   <script src="js/main.js"></script>
 </body>

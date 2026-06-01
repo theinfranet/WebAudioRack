@@ -30,6 +30,14 @@ incrementalmente en sesiones futuras de Claude (Opus 4.8). Cada tarea trae
 ### T1.1 · Save / Load de patches
 **Problema:** todo se pierde al refrescar.
 
+> **✅ HECHO (Sprint 1).** Implementación final (se desvió un poco del diseño de abajo, a mejor):
+> - Modelo: `Module.serialize()` devuelve `{ type, x, y, params:[...], title?, state? }`. En lugar de `controlId`, **todos** los controles con estado (knob, fader, **select y wave-switch**) se registran en `this.controls` en orden de creación, y se serializan **por índice** (array `params`). Orden de construcción determinista ⇒ mapeo estable. `addSelect(..., { persist:false })` excluye los selects de dispositivo (Output/Device), cuyo `deviceId` no es portable.
+> - `Module.deserialize(data)` reaplica `params[i] → controls[i].set(v)`. Se arregló `addFader` para que `set()` dispare `onChange` (antes solo movía el thumb ⇒ el audio no recuperaba la ganancia).
+> - `Rack.toJSON()` / `Rack.fromJSON(json, {viewport})`. Cables serializados como `{ out:[modIdx,portIdx], in:[modIdx,portIdx], color }`; `fromJSON` limpia (dispose all + removeCable all), reconstruye por `spawnExact` (posición exacta, sin reflow) y reconecta por índice. `Patch.connect(out,in,color)` admite color para conservarlo.
+> - UI: botones `GUARDAR / CARGAR / EXPORT / IMPORT` en la toolbar. Guardar/Cargar → `localStorage['webaudiorack.patch']`. Export/Import → archivo `.wapatch` (JSON). Autosave cada 10 s en `webaudiorack.autosave` + al `beforeunload`; al abrir ofrece **restaurar** la sesión anterior con un toast no bloqueante (`UI.toast`).
+> - Edge cases: buffers de Sampler/Player NO se serializan (hay que recargar el archivo); Device no persiste deviceId.
+> - **Archivos nuevos:** `js/core/persistence.js`, `js/core/ui.js`. **Tocados:** `module.js`, `rack.js`, `patch.js`, `io.js`, `advanced.js`, `index.html`, `css/sprint1.css`.
+
 **Diseño:**
 - Modelo serializable por módulo: añadir en `class Module` un método `serialize()` que devuelva `{ id: defId, x, y, params: {...}, state: {...} }`. Default base que serializa `controls` (cada `addKnob`/`addFader` ya guarda un `api` con `value` y `set`); cada subclase puede sobrescribir si tiene estado adicional (sequencer steps, sampler buffer URL, etc.).
 - Cable: `{ out: { modIdx, portIdx }, in: { modIdx, portIdx }, color }`.
@@ -51,6 +59,13 @@ incrementalmente en sesiones futuras de Claude (Opus 4.8). Cada tarea trae
 ---
 
 ### T1.2 · Undo / Redo
+
+> **✅ HECHO (Sprint 1) — por INSTANTÁNEAS, no por comandos inversos.** Decisión de diseño: el patrón comando `{do,undo}` de abajo es frágil (referencias colgantes tras recrear módulos, reemplazo silencioso de cables al conectar, etc.). En su lugar `js/core/history.js` guarda **snapshots** completos (`JSON.stringify(Rack.toJSON())`, máx. 100) y deshacer = `Rack.fromJSON(prev, {viewport:false})`. Correcto por construcción y reutiliza toda la infra de T1.1.
+> - **Coalescencia:** `History.record()` no captura de inmediato; agenda un microtask. Varias llamadas en el mismo turno síncrono (p. ej. borrar un módulo = quitar N cables + dispose) colapsan en **un solo** snapshot ⇒ un solo paso de undo. Verificado con test funcional (jsdom).
+> - **Hooks** (con guarda `History.suspended`): `Rack.add`, `Module.dispose`, `Patch.connect`/`removeCable`/`setCableColor`, fin de arrastre de knob/fader/módulo, y `change` de select/wave. No registra durante boot ni durante un restore.
+> - Atajos: `Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z`, `Ctrl/Cmd+Y`. Botones `↶ ↷` en la toolbar reflejan `canUndo/canRedo` (`History.bindButtons`). `undo/redo` NO mueve el encuadre (menos desorientador).
+> - Nota: `window.History` pisa el constructor nativo `History` del navegador (no se usa); las guardas son `window.History && History.record`.
+
 **Diseño:**
 - Stack de comandos `{ do(), undo() }` con tamaño máximo (e.g. 100).
 - Atajos: Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z.
@@ -67,6 +82,12 @@ incrementalmente en sesiones futuras de Claude (Opus 4.8). Cada tarea trae
 ---
 
 ### T1.3 · Selección múltiple
+
+> **✅ HECHO (Sprint 2).** `Rack.selection: Set<Module>` con `selected` mantenido como "primario" por compat. API: `selectOne` (clic), `selectAdd`, `selectToggle` (Shift+clic), `selectAll` (Ctrl/Cmd+A), `deselect` (Esc/clic en vacío), `isSelected`, `selectionList`; `select()` quedó como alias de `selectOne`. `_applySel()` refleja la clase `.selected` en todos los módulos.
+> - **Arrastre de grupo** (`module.js _makeDraggable`): si arrastras un módulo ya seleccionado y la selección tiene >1, se mueven **todos** por el mismo delta con snap a grilla/fila, **sin** empuje magnético entre ellos (la decisión del plan: no auto-empujarse). El arrastre individual conserva el comportamiento magnético `Layout.drag`. Clic simple sin mover sobre un miembro del grupo lo colapsa a ese módulo. Shift sobre el header solo (de)selecciona, no arrastra.
+> - **Marquee** (`js/core/selection.js`): **Shift+arrastre desde el vacío** dibuja un rectángulo y añade a la selección; intersección en coords de pantalla (`getBoundingClientRect`), robusta a zoom/pan. `Viewport._down` cede ante Shift para no hacer pan.
+> - Atajos: Ctrl/Cmd+A (todo), Esc (deseleccionar), Delete/Backspace (borra **toda** la selección en un paso de undo vía `deleteSelection`).
+
 **Diseño:**
 - `Rack.selection: Set<Module>` reemplazando o complementando `Rack.selected`.
 - Modos de selección:
@@ -84,6 +105,11 @@ incrementalmente en sesiones futuras de Claude (Opus 4.8). Cada tarea trae
 ---
 
 ### T1.4 · Duplicar módulo + Copy/Paste
+
+> **✅ HECHO (Sprint 2).** Portapapeles interno `Rack.clipboard`. `_serializeSet(mods)` serializa los módulos **+ solo los cables internos** al conjunto (índices relativos a la selección). `_spawnSet(data, off)` reconstruye desplazado, reconecta los cables internos, deja lo nuevo seleccionado y registra **un** paso de undo.
+> - `copySelection()` (Ctrl/Cmd+C) → `clipboard`. `paste(off)` (Ctrl/Cmd+V) pega desplazado; el menú contextual del lienzo ofrece **"Pegar aquí"** que coloca el portapapeles bajo el cursor (offset calculado desde `clipboard.modules[0]`). `duplicateSelection()` (Ctrl/Cmd+D) duplica sin tocar el portapapeles. `Rack.duplicate(mod)` (single, del menú contextual del módulo) ya existía desde Sprint 1.
+> - Verificado con test funcional jsdom: copy→paste preserva el cable interno osc→amp y selecciona lo pegado; duplicar y borrar-selección-como-1-undo OK.
+
 **Diseño:**
 - Ctrl+D duplica selección desplazada 1 fila o a la derecha.
 - Ctrl+C / Ctrl+V con clipboard interno (no portapapeles del SO al inicio; v2: JSON al SO clipboard).
@@ -96,6 +122,12 @@ incrementalmente en sesiones futuras de Claude (Opus 4.8). Cada tarea trae
 ---
 
 ### T1.5 · Menú contextual (click derecho)
+
+> **✅ HECHO (Sprint 1).** `js/core/contextmenu.js`: `ContextMenu.open(x,y,items)` con `items=[{label,onClick,hint?,disabled?,separator?,submenu?,header?}]`, reposiciona dentro de la ventana, cierra con click-fuera / Escape / scroll / blur. `ContextMenu.init()` instala UN listener delegado de `contextmenu` que resuelve el objetivo vía `closest()` + refs DOM↔objeto (`knob.__control`, `jack.__port`, `cable.__cable`, `module.__module`).
+> - Variantes: **Knob** (valor actual, entrada numérica vía prompt, reiniciar, copiar/pegar valor) · **Cable** (borrar, submenú de color con swatches) · **Puerto** (info + desconectar todo) · **Módulo** (renombrar, duplicar, traer al frente, borrar) · **Lienzo vacío** (añadir módulo aquí, centrar todo — hooks fijados desde `main.js`).
+> - Para que el click derecho no inicie arrastres, el `mousedown` de knob/fader/header/jack ahora exige botón izquierdo.
+> - **Archivos nuevos:** `js/core/contextmenu.js` (+ `ui.js` para `UI.toast`). Estilos en `css/sprint1.css`.
+
 **Diseño:**
 - Un único componente `ContextMenu` reutilizable: `ContextMenu.open(x, y, items)` donde `items = [{ label, onClick, icon?, separator?, submenu? }]`.
 - Variantes según target:
@@ -116,6 +148,9 @@ incrementalmente en sesiones futuras de Claude (Opus 4.8). Cada tarea trae
 
 ### T2.1 · Indicador de modulación en knob
 **Problema:** los CV cableados a `AudioParam` modulan invisiblemente. VCV dibuja un arco animado que muestra el rango efectivo del valor modulado.
+
+> **✅ PARCIAL (Sprint 3) — enlace + indicador estático.** `Module.paramLinks: Map<AudioParam, knobApi>`; `addKnob` acepta `def.param` y registra el enlace. Anotados: VCO (FREQ→`osc.frequency`, FINE→`osc.detune`), LFO (RATE), VCF (CUTOFF), VCA (GAIN), Delay (TIME), Panner (PAN) — cada uno comparte el mismo `AudioParam` con su puerto CV. En `Patch.connect`/`removeCable`, `_refreshMod(port)` busca `port.module.paramLinks.get(port.node)` y alterna la clase `.modulated` en el knob (anillo ámbar + label ámbar, en `css/sprint1.css`). Verificado con jsdom (enlace correcto + toggle al conectar/desconectar).
+> **Pendiente (paso 3 del plan):** el arco animado MEDIDO. Requiere muestrear el nivel del CV sin clamp (el `level()` actual satura a 1) y mapearlo a unidades del knob según su curva. Es lo más delicado; se dejó para una iteración dedicada.
 
 **Diseño:**
 - Cuando un `Port` con `kind: "cv"` recibe cable (es `AudioParam`), localizar el knob asociado a ese param. Hoy no hay relación directa — añadir `addKnob({...})` un campo opcional `param` que apunte al `AudioParam` y registrarlo en `module.paramLinks: Map<AudioParam, knobApi>`.
@@ -142,6 +177,9 @@ incrementalmente en sesiones futuras de Claude (Opus 4.8). Cada tarea trae
 ---
 
 ### T2.3 · Hover cable → resaltar + jump
+
+> **✅ HECHO (Sprint 3).** `mouseenter` en el cable: engrosa (`.hover`, ya existía) + resalta ambos jacks (`.jack.highlighted`) + muestra un tooltip flotante `Módulo A · OUT  →  Módulo B · IN` que sigue el cursor (`.cable-tip`). **El "jump" se hizo vía menú contextual** ("Centrar en origen" / "Centrar en destino" → `Patch.jumpToPort`) en lugar de doble-click, porque el **clic simple ya borra el cable** (un doble-click lo eliminaría antes de poder saltar). Si se quiere el doble-click del plan, habría que mover el borrado a solo menú contextual.
+
 **Diseño:**
 - Mouseenter en cable → aumentar grosor del path, resaltar ambos jacks (`.connected.highlighted`), tooltip flotante `Módulo A · OUT → Módulo B · CUT CV`.
 - Doble-click en cable → centrar viewport en el extremo opuesto a donde está el cursor (útil para patches grandes).
@@ -156,6 +194,8 @@ incrementalmente en sesiones futuras de Claude (Opus 4.8). Cada tarea trae
 ### T2.4 · Aviso al reemplazar conexión
 **Problema:** `Patch.connect` elimina silenciosamente el cable previo si la entrada ya estaba ocupada.
 
+> **✅ HECHO (Sprint 3).** `Patch.connect` detecta el reemplazo (`inp.connections.size > 0` al entrar) y muestra `UI.toast("Conexión reemplazada")` — guardado para que NO salte durante carga/undo/paste (esos conectan a entradas vacías; además se exige `!History.suspended`). Verificado: el toast salta exactamente una vez por reemplazo real y la entrada queda con un solo cable. El fade-out del cable saliente quedó como pulido opcional.
+
 **Diseño:**
 - Cuando hay reemplazo: animar el cable saliente con fade-out (200ms con clase CSS `.cable.removing`) antes de eliminarlo, y mostrar pequeño toast "Conexión reemplazada".
 - Toast: helper `UI.toast(msg, ms)` reutilizable.
@@ -163,6 +203,9 @@ incrementalmente en sesiones futuras de Claude (Opus 4.8). Cada tarea trae
 ---
 
 ### T2.5 · Tooltips en jacks
+
+> **✅ HECHO** — cubierto (y superado) por `js/core/tooltips.js`: un glosario que al hacer hover sobre cualquier etiqueta técnica (incluidas las de los jacks, `.port__label`) muestra qué es + el nodo/AudioParam de la Web Audio API correspondiente.
+
 - Hover sobre `.jack` muestra `<modulo>.<label> [audio/cv]`.
 - Reutiliza el sistema de tooltip de T2.3.
 
@@ -171,6 +214,9 @@ incrementalmente en sesiones futuras de Claude (Opus 4.8). Cada tarea trae
 ## TIER 3 — Navegación y layout
 
 ### T3.1 · Minimap
+
+> **✅ HECHO (Sprint 4).** `js/core/minimap.js`: canvas 200×140 (retina) abajo-izquierda de `.rack`. Dibuja cada módulo como rectángulo (seleccionado = acento) + el rectángulo del viewport. Escala y posiciona sobre el bbox de todos los módulos **+ el viewport actual** (para que el indicador siga visible aunque te alejes). Refresco a ~4 Hz (`setInterval` 250ms; salta si `document.hidden`). Click/arrastre → mapea minimapa→mundo y `Viewport.centerOn`. Verificado con test: round-trip mundo↔minimapa exacto y el centro del bbox cae en el centro del minimapa. Init desde `main.js` (`Minimap.init()`); CSS `.minimap` en `css/sprint1.css`.
+
 **Diseño:**
 - Esquina inferior izquierda, 200×140 px, fondo translúcido.
 - Cada módulo = rectángulo escalado. Viewport = rectángulo con borde `--accent`.
@@ -183,6 +229,9 @@ incrementalmente en sesiones futuras de Claude (Opus 4.8). Cada tarea trae
 ---
 
 ### T3.2 · Atajos de vista
+
+> **✅ PARCIAL (Sprint 4).** `Viewport.fitTo(box, immediate)` encuadra (zoom + centro, clamp a min/max, padding 80px). En `main.js`: `boundsOf(mods)` + `fitView()` (selección si hay, si no todo). `F` = `fitView`, `0` = `Viewport.zoomTo(1)` (100% manteniendo el centro). El menú contextual "Centrar todo" ahora usa `fitView`. Verificado el encuadre/clamp con test. **Pendiente:** bookmarks 1–9.
+
 - `F` → fit to selection (o todo el patch si nada seleccionado). Ya existe `centerOn` y el cálculo de bounding box en `main.js` final — extraer a `Viewport.fitTo(boxes)`.
 - `0` → reset zoom 100% manteniendo centro.
 - `1`-`9` → bookmarks de viewport (Shift+N para guardar, N para saltar).
@@ -190,6 +239,9 @@ incrementalmente en sesiones futuras de Claude (Opus 4.8). Cada tarea trae
 ---
 
 ### T3.3 · Zoom % clickable
+
+> **DESCARTADO (Sprint 4).** Se implementó y luego se revirtió a petición del usuario: la zoom bar (slider + rueda + atajo `0`) ya cubre la necesidad; el input numérico no aportaba.
+
 - El `#zoomValue` actual se convierte en botón. Click → input numérico (50-260). Doble-click → 100%.
 
 ---
@@ -228,6 +280,10 @@ Documentar en README el cambio.
 Cada uno añade widgets/affordances nuevos al UI kit.
 
 ### T4.1 · Quantizer
+
+> **✅ HECHO (Sprint 5).** En `js/modules/utility.js`. Lee la CV de entrada vía `AnalyserNode` a ritmo de control (raf), cuantiza con la función pura `quantizeCents(cents, escala, tónica)` al grado más cercano y emite por un `ConstantSourceNode` (con `setTargetAtTime` para suavizar saltos). Selectores de escala (cromática/mayor/menor/pentatónica/dórica/frigia) y de tónica; pantalla con el nombre de nota + semitonos. Convención: pitch CV en **cents** (igual que 1V/OCT→detune del VCO). `quantizeCents` verificado con tests (incl. tónica ≠ C, pentatónica, notas negativas). Expone `window.WAR.quantizeCents/SCALES` para tests.
+
+### T4.1 (diseño original)
 - Dropdown de escala (chromatic, major, minor, pentatonic, dorian, phrygian…).
 - Tónica seleccionable.
 - IN CV (volts/oct semis) → cuantiza al nearest grado de la escala → OUT CV.
@@ -247,10 +303,16 @@ Cada uno añade widgets/affordances nuevos al UI kit.
 - OUT: CV + GATE.
 
 ### T4.5 · Clock + Clock Divider
+
+> **✅ PARCIAL (Sprint 5).** **Clock** HECHO (`js/modules/utility.js`): knob BPM (20–300), botón RUN, 4 salidas gate (`PULSE`, `/2`, `/4`, `/8`) generadas con `ConstantSourceNode` programados (gate 0/1, ancho = medio beat) en un bucle raf que cuenta beats con `Engine.now` (mismo patrón que el Sequencer; `while` con guard para recuperar beats si cae un frame). LED ámbar que parpadea. **Pendiente: Divider** (lee un clock externo y lo divide) — requiere leer la señal de entrada (analyser/edge-detect), como el quantizer.
+
 - **Clock**: BPM master, OUT pulse + divisiones /2 /4 /8.
 - **Divider**: IN clock, 8 OUTs dividos /1 /2 /3 /4 /8 /16 /32 /64.
 
 ### T4.6 · Multiples (1→N)
+
+> **✅ HECHO (Sprint 5).** `Multiple` en `js/modules/utility.js`: 1 IN, 4 OUT. Bajo el capó un único `GainNode(1)`; las 4 salidas comparten ese nodo y `.connect()` se abanica a todos los destinos. UI compacta. Icono `mult` en `icons.js`.
+
 - Trivial: passthrough con N salidas. UI muy compacta (1 IN, 4 OUT).
 - Bajo el capó: una `GainNode(1)` con `.connect` múltiple.
 
@@ -390,39 +452,39 @@ la UI de medición.
 ## Checklist consolidado
 
 ### Tier 1 (crítico)
-- [ ] T1.1 Save/load + autosave
-- [ ] T1.2 Undo/redo
-- [ ] T1.3 Selección múltiple + marquee
-- [ ] T1.4 Duplicar + copy/paste
-- [ ] T1.5 Menú contextual reutilizable
+- [x] T1.1 Save/load + autosave  *(Sprint 1 — ver nota abajo)*
+- [x] T1.2 Undo/redo  *(Sprint 1 — por snapshots)*
+- [x] T1.3 Selección múltiple + marquee  *(Sprint 2)*
+- [x] T1.4 Duplicar + copy/paste  *(Sprint 2)*
+- [x] T1.5 Menú contextual reutilizable  *(Sprint 1)*
 
 ### Tier 2 (pulido modular)
-- [ ] T2.1 Indicador de modulación en knob
+- [~] T2.1 Indicador de modulación en knob  *(Sprint 3: enlace + anillo estático HECHO; arco animado medido pendiente)*
 - [ ] T2.2 Atenuverters inline
-- [ ] T2.3 Hover cable + jump to other end
-- [ ] T2.4 Toast al reemplazar conexión
-- [ ] T2.5 Tooltips en jacks
+- [x] T2.3 Hover cable + jump to other end  *(Sprint 3)*
+- [x] T2.4 Toast al reemplazar conexión  *(Sprint 3)*
+- [x] T2.5 Tooltips en jacks  *(cubierto por `js/core/tooltips.js` — glosario Web Audio)*
 
 ### Tier 3 (navegación)
-- [ ] T3.1 Minimap
-- [ ] T3.2 Atajos de vista (F, 0, bookmarks)
-- [ ] T3.3 Zoom % clickable
+- [x] T3.1 Minimap  *(Sprint 4)*
+- [~] T3.2 Atajos de vista (F, 0, bookmarks)  *(Sprint 4: F=fit, 0=100% HECHO; bookmarks 1-9 pendientes)*
+- [ ] T3.3 Zoom % clickable  *(descartado por el usuario — el zoom bar ya basta)*
 - [ ] T3.4 Drag desde catálogo
 - [ ] T3.5 Reasignar Space → pan
 - [ ] T3.6 Ghost de destino
 
 ### Tier 4 (módulos)
-- [ ] T4.1 Quantizer
+- [x] T4.1 Quantizer  *(Sprint 5)*
 - [ ] T4.2 Sample & Hold + Slew
 - [ ] T4.3 MIDI Input
 - [ ] T4.4 Teclado qwerty
-- [ ] T4.5 Clock + Divider
-- [ ] T4.6 Multiples
+- [~] T4.5 Clock + Divider  *(Sprint 5: Clock HECHO; Divider — que lee un clock externo — pendiente)*
+- [x] T4.6 Multiples  *(Sprint 5)*
 - [ ] T4.7 Macro knob
 - [ ] T4.8 Vectorscope / Spectrogram
 
 ### Tier 5 (QoL)
-- [ ] T5.1 Renombrar módulo
+- [~] T5.1 Renombrar módulo  *(adelantado: "Renombrar…" en el menú contextual del módulo; persiste como `custom`/`title` en serialize)*
 - [x] T5.2 Panel de performance + medidor master (incluye T5.2b: DAW-friendly background)
 - [ ] T5.3 Indicador de problemas
 - [ ] T5.4 Touch / pinch zoom
@@ -432,7 +494,7 @@ la UI de medición.
 
 ### Bugfixes
 - [ ] Borrar dead code en `sources.js:57`
-- [ ] Acotar selección en `module.js:35`
+- [~] Acotar selección en `module.js:35`  *(parcial: el inicio de arrastre de knob/fader/header/jack ahora exige botón izquierdo `e.button!==0 → return`, así el click derecho abre el menú contextual sin arrastrar; el `mousedown`→select desde cualquier hijo se mantiene pero es inofensivo)*
 - [ ] Aclarar UI de `Output` L/ST vs R
 - [ ] Revisar `blur` en Space (al reasignar)
 - [~] Pausar `Patch._loop` cuando Engine suspendido (mitigado: ahora es setInterval, ver T5.2b)

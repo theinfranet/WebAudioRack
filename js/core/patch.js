@@ -140,6 +140,7 @@ class PatchBay {
 
   // ---------- arrastre ----------
   _onDown(e, port) {
+    if (e.button !== 0) return;            // solo botón izquierdo inicia cableado
     e.preventDefault();
     e.stopPropagation();
     Engine.resume();
@@ -160,10 +161,24 @@ class PatchBay {
     const ns = "http://www.w3.org/2000/svg";
     const temp = document.createElementNS(ns, "path");
     temp.setAttribute("class", "cable");
+    // El cable temporal NO debe capturar el hit-test: su extremo se dibuja
+    // justo bajo el cursor y, al estar la capa de cables en z-index 100000
+    // (por encima de los módulos), interceptaría elementFromPoint y taparía
+    // el jack objetivo -> la conexión "a veces no funcionaba".
+    temp.style.pointerEvents = "none";
     temp.setAttribute("stroke", fromPort.dir === "out" ? this._color(fromPort) : "var(--metal)");
     this.svg.appendChild(temp);
     this.drag = { from: fromPort, tempPath: temp };
+    // Los cables EXISTENTES tampoco deben bloquear el hit-test mientras se
+    // conecta (uno que pase por encima de un jack impediría soltar ahí).
+    this._setCablesInert(true);
     this._onMove(e);
+  }
+
+  /** Activa/desactiva el hit-test de los cables ya dibujados (solo durante un arrastre). */
+  _setCablesInert(on) {
+    const v = on ? "none" : "";
+    for (const c of this.cables) if (c.path) c.path.style.pointerEvents = v;
   }
 
   _color(port) {
@@ -203,13 +218,23 @@ class PatchBay {
     if (!this.drag) return;
     const from = this.drag.from;
     this.drag.tempPath.remove();
-    if (this.hoverPort && this._compatible(from, this.hoverPort)) {
-      const out = from.dir === "out" ? from : this.hoverPort;
-      const inp = from.dir === "in" ? from : this.hoverPort;
+    // Objetivo: el puerto resaltado durante el movimiento. Red de seguridad:
+    // si el último mousemove no llegó a fijarlo (soltado muy rápido), se
+    // resuelve de nuevo en el punto de soltar (los cables ya son inertes).
+    let target = this.hoverPort;
+    if (!target && e) {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const jack = el && el.closest(".jack");
+      if (jack && jack.__port) target = jack.__port;
+    }
+    if (target && this._compatible(from, target)) {
+      const out = from.dir === "out" ? from : target;
+      const inp = from.dir === "in" ? from : target;
       this.connect(out, inp);
     }
     if (this.hoverPort) this.hoverPort.el.classList.remove("target-ok", "target-bad");
     this.hoverPort = null;
+    this._setCablesInert(false);   // restaura el hit-test de los cables
     this.drag = null;
   }
 
@@ -221,10 +246,12 @@ class PatchBay {
   }
 
   // ---------- conexiones ----------
-  connect(out, inp) {
-    // una entrada solo admite un cable
-    if (inp.connections.size) this.removeCable([...inp.connections][0]);
-    const cable = new Cable(out, inp, this.cableColor || this._color(out));
+  // forceColor: usado al cargar/duplicar para conservar el color guardado.
+  connect(out, inp, forceColor) {
+    // una entrada solo admite un cable: si ya había, se reemplaza
+    const replaced = inp.connections.size > 0;
+    if (replaced) this.removeCable([...inp.connections][0]);
+    const cable = new Cable(out, inp, forceColor || this.cableColor || this._color(out));
     cable.wire();
     out.ensureAnalyser();
     out.connections.add(cable);
@@ -234,6 +261,12 @@ class PatchBay {
     this._updateCable(cable);
     out.el.classList.add("connected");
     inp.el.classList.add("connected");
+    this._refreshMod(inp);                       // T2.1: marca el knob modulado
+    // T2.4: avisar SOLO ante un reemplazo real del usuario (no en carga/undo)
+    if (replaced && window.UI && UI.toast && !(window.History && History.suspended)) {
+      UI.toast("Conexión reemplazada", 1600);
+    }
+    if (window.History && History.record) History.record();
     return cable;
   }
 
@@ -248,6 +281,69 @@ class PatchBay {
     this.cables = this.cables.filter((c) => c !== cable);
     if (!cable.out.connections.size) cable.out.el.classList.remove("connected");
     if (!cable.in.connections.size) cable.in.el.classList.remove("connected");
+    this._refreshMod(cable.in);                  // T2.1: desmarca si quedó sin CV
+    if (window.History && History.record) History.record();
+  }
+
+  // ---------- T2.1: indicador de modulación en el knob ----------
+  // Si el puerto es un AudioParam con un knob enlazado (module.paramLinks),
+  // alterna la clase .modulated según tenga o no cable de entrada.
+  _modKnob(port) {
+    if (!port || !port.isParam || !port.isParam()) return null;
+    const m = port.module;
+    return (m && m.paramLinks) ? (m.paramLinks.get(port.node) || null) : null;
+  }
+  _refreshMod(port) {
+    const k = this._modKnob(port);
+    if (k && k.el) k.el.classList.toggle("modulated", port.connections.size > 0);
+  }
+
+  // ---------- T2.3: tooltip de cable + resaltado + salto ----------
+  _ensureCableTip() {
+    if (this._cableTip && document.body.contains(this._cableTip)) return this._cableTip;
+    const t = document.createElement("div");
+    t.className = "cable-tip";
+    document.body.appendChild(t);
+    this._cableTip = t;
+    return t;
+  }
+  _cableHoverOn(cable) {
+    if (cable.out.el) cable.out.el.classList.add("highlighted");
+    if (cable.in.el) cable.in.el.classList.add("highlighted");
+    const t = this._ensureCableTip();
+    t.textContent = cable.out.module.title + " · " + cable.out.label + "  →  " + cable.in.module.title + " · " + cable.in.label;
+    t.classList.add("show");
+  }
+  _cableTipMove(e) {
+    if (!this._cableTip) return;
+    this._cableTip.style.left = (e.clientX + 14) + "px";
+    this._cableTip.style.top = (e.clientY + 14) + "px";
+  }
+  _cableHoverOff(cable) {
+    if (cable.out.el) cable.out.el.classList.remove("highlighted");
+    if (cable.in.el) cable.in.el.classList.remove("highlighted");
+    if (this._cableTip) this._cableTip.classList.remove("show");
+  }
+  /** Centra la vista en un extremo del cable (menú contextual del cable). */
+  jumpToPort(port) {
+    if (!window.Viewport || !port || !port.el) return;
+    const c = this.center(port);
+    Viewport.centerOn(c.x, c.y);
+  }
+
+  /** Quita todos los cables conectados a un puerto (menú contextual). */
+  disconnectPort(port) {
+    [...port.connections].forEach((c) => this.removeCable(c));
+  }
+
+  /** Recolorea un único cable (menú contextual del cable). */
+  setCableColor(cable, color) {
+    const col = color || this._color(cable.out);
+    cable.color = col;
+    if (cable.path) cable.path.setAttribute("stroke", col);
+    if (cable.plugA) cable.plugA.setAttribute("fill", col);
+    if (cable.plugB) cable.plugB.setAttribute("fill", col);
+    if (window.History && History.record) History.record();
   }
 
   _draw(cable) {
@@ -255,9 +351,11 @@ class PatchBay {
     const path = document.createElementNS(ns, "path");
     path.setAttribute("class", "cable");
     path.setAttribute("stroke", cable.color);
-    path.addEventListener("mouseenter", () => path.classList.add("hover"));
-    path.addEventListener("mouseleave", () => path.classList.remove("hover"));
-    path.addEventListener("click", (e) => { e.stopPropagation(); this.removeCable(cable); });
+    path.__cable = cable;        // ref DOM -> cable (menú contextual)
+    path.addEventListener("mouseenter", () => { path.classList.add("hover"); this._cableHoverOn(cable); });
+    path.addEventListener("mousemove", (e) => this._cableTipMove(e));
+    path.addEventListener("mouseleave", () => { path.classList.remove("hover"); this._cableHoverOff(cable); });
+    path.addEventListener("click", (e) => { e.stopPropagation(); this._cableHoverOff(cable); this.removeCable(cable); });
     this.svg.appendChild(path);
     cable.path = path;
     cable.glow = null;

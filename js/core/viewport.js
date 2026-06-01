@@ -78,6 +78,7 @@ const Viewport = {
   // ---- arrastrar espacio vacío para hacer pan ----
   _down(e) {
     if (e.button !== 0) return;
+    if (e.shiftKey) return;              // Shift+arrastre desde vacío = marquee (lo maneja Selection)
     // ignorar si el click es sobre un módulo, jack, cable o control
     if (e.target.closest(".module") || e.target.closest(".jack") || e.target.closest(".cable")) return;
     if (window.Rack) Rack.deselect();    // clic en vacío deselecciona
@@ -102,6 +103,22 @@ const Viewport = {
     const r = this.rack.getBoundingClientRect();
     this.tPanX = r.width / 2 - wx * this.tZoom;
     this.tPanY = r.height / 2 - wy * this.tZoom;
+    if (immediate) { this.panX = this.tPanX; this.panY = this.tPanY; this.zoom = this.tZoom; this._apply(); this._lpx = this.panX; this._lpy = this.panY; this._lz = this.zoom; }
+  },
+
+  /** Encuadra una caja del mundo {minX,minY,maxX,maxY}: ajusta zoom + centro. */
+  fitTo(box, immediate) {
+    if (!box) return;
+    const r = this.rack.getBoundingClientRect();
+    const pad = 80;
+    const bw = Math.max(1, box.maxX - box.minX);
+    const bh = Math.max(1, box.maxY - box.minY);
+    let z = Math.min((r.width - pad) / bw, (r.height - pad) / bh);
+    z = Math.max(this.min, Math.min(this.max, z));
+    this.tZoom = z;
+    const cx = (box.minX + box.maxX) / 2, cy = (box.minY + box.maxY) / 2;
+    this.tPanX = r.width / 2 - cx * z;
+    this.tPanY = r.height / 2 - cy * z;
     if (immediate) { this.panX = this.tPanX; this.panY = this.tPanY; this.zoom = this.tZoom; this._apply(); this._lpx = this.panX; this._lpy = this.panY; this._lz = this.zoom; }
   },
 

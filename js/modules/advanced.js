@@ -156,12 +156,12 @@ class Device extends Module {
 
     const gIn = this.group("ENTRADA (interfaz → rack)");
     this.inSel = this.addSelect(gIn, [{ value: "", label: "— activa para listar —" }],
-      (id) => { this.inId = id; if (this.stream) this._openInput(); }, "");
+      (id) => { this.inId = id; if (this.stream) this._openInput(); }, "", { persist: false });
     const inRow = this.row(gIn); inRow.style.gap = "4px";
     for (let i = 0; i < 4; i++) this.addPort(inRow, "out", this.splitter, { label: "I" + (i + 1), index: i });
 
     const gOut = this.group("SALIDA (rack → interfaz)");
-    this.outSel = this.addSelect(gOut, [{ value: "", label: "— activa para listar —" }], (id) => this._setOutput(id), "");
+    this.outSel = this.addSelect(gOut, [{ value: "", label: "— activa para listar —" }], (id) => this._setOutput(id), "", { persist: false });
     const outRow = this.row(gOut); outRow.style.gap = "4px";
     for (let i = 0; i < 4; i++) this.addPort(outRow, "in", this.outGains[i], { label: "O" + (i + 1) });
 

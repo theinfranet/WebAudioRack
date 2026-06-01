@@ -123,6 +123,18 @@
   window.addEventListener("keydown", (e) => {
     const t = e.target.tagName;
     const typing = (t === "INPUT" || t === "TEXTAREA");
+    // atajos de historial / guardado (Ctrl/Cmd)
+    const cmd = e.ctrlKey || e.metaKey;
+    if (cmd && !typing) {
+      const k = e.key.toLowerCase();
+      if (k === "z" && !e.shiftKey) { e.preventDefault(); if (window.History) History.undo(); return; }
+      if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); if (window.History) History.redo(); return; }
+      if (k === "s") { e.preventDefault(); if (window.Persistence) Persistence.save(); return; }
+      if (k === "a") { e.preventDefault(); Rack.selectAll(); return; }
+      if (k === "c") { e.preventDefault(); Rack.copySelection(); return; }
+      if (k === "v") { e.preventDefault(); Rack.paste(); return; }
+      if (k === "d") { e.preventDefault(); Rack.duplicateSelection(); return; }
+    }
     if (e.code === "Space" && !typing) {
       e.preventDefault();
       if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -130,8 +142,11 @@
       return;
     }
     if ((e.key === "Delete" || e.key === "Backspace") && !typing) {
-      if (Rack.selected) { e.preventDefault(); Rack.selected.dispose(); return; }
+      if (Rack.selection && Rack.selection.size) { e.preventDefault(); Rack.deleteSelection(); return; }
     }
+    // T3.2: atajos de vista
+    if (!typing && (e.key === "f" || e.key === "F")) { e.preventDefault(); fitView(); return; }
+    if (!typing && e.key === "0") { e.preventDefault(); Viewport.zoomTo(1); return; }
     if (t === "INPUT" || t === "SELECT" || t === "TEXTAREA" || t === "BUTTON") return;
     if (e.key === "Enter") { e.preventDefault(); toggleMenu(); }
     else if (e.key === "Escape") { closeMenu(); Rack.deselect(); }
@@ -187,7 +202,7 @@
 
   // ---------- tensión de cables ----------
   const tension = document.getElementById("tension");
-  tension.addEventListener("input", () => { Patch.tension = parseInt(tension.value, 10) / 100; });
+  tension.addEventListener("input", () => { Patch.tension = parseInt(tension.value, 10) / 100; Patch.redrawAll(); });
   Patch.tension = parseInt(tension.value, 10) / 100;
 
   // ---------- cajón de cables ----------
@@ -196,7 +211,6 @@
   const cableList = document.getElementById("cableList");
   const cablePick = document.getElementById("cablePick");
   const applyAll = document.getElementById("applyAll");
-  const cableDot = document.getElementById("cableDot");
   const AUTO_GRAD = "conic-gradient(#36d39a,#ffd23d,#ff7a3d,#ff5e8a,#c46bff,#36d39a)";
 
   const palette = [
@@ -212,11 +226,11 @@
       <stop offset="0" stop-color="#36d39a"/><stop offset=".35" stop-color="#ffd23d"/>
       <stop offset=".7" stop-color="#ff5e8a"/><stop offset="1" stop-color="#c46bff"/></linearGradient></defs>` : "";
     return `<svg viewBox="0 0 240 22" preserveAspectRatio="none">${defs}
-      <path d="M24 11 C 82 19, 158 19, 216 11" fill="none" stroke="${fill}" stroke-width="5" stroke-linecap="round"/>
-      <rect x="2" y="8.5" width="11" height="5" rx="2" fill="#c8ccd4"/>
-      <rect x="10" y="3.5" width="14" height="15" rx="3" fill="${fill}" stroke="rgba(0,0,0,.55)"/>
-      <rect x="227" y="8.5" width="11" height="5" rx="2" fill="#c8ccd4"/>
-      <rect x="216" y="3.5" width="14" height="15" rx="3" fill="${fill}" stroke="rgba(0,0,0,.55)"/></svg>`;
+      <path d="M39 11 C 90 19, 150 19, 201 11" fill="none" stroke="${fill}" stroke-width="5" stroke-linecap="round"/>
+      <rect x="2" y="8.5" width="16" height="5" rx="2" fill="#c8ccd4"/>
+      <rect x="14" y="3.5" width="25" height="15" rx="3" fill="${fill}" stroke="rgba(0,0,0,.55)"/>
+      <rect x="222" y="8.5" width="16" height="5" rx="2" fill="#c8ccd4"/>
+      <rect x="201" y="3.5" width="25" height="15" rx="3" fill="${fill}" stroke="rgba(0,0,0,.55)"/></svg>`;
   }
 
   function selectCable(c, el) {
@@ -224,7 +238,6 @@
     Patch.setNewColor(c);
     [...cableList.children].forEach((x) => x.classList.remove("active"));
     if (el) el.classList.add("active");
-    cableDot.style.background = c || AUTO_GRAD;
   }
 
   palette.forEach((p, i) => {
@@ -252,108 +265,48 @@
   }
   power.addEventListener("click", togglePower);
 
-  // ---------- panel de performance (driven by setInterval para sobrevivir background) ----------
-  const perfState  = document.getElementById("perfState");
-  const perfSR     = document.getElementById("perfSR");
-  const perfLat    = document.getElementById("perfLat");
-  const perfFrame  = document.getElementById("perfFrame");
-  const perfClock  = document.getElementById("perfClock");
-  const perfGraph  = document.getElementById("perfGraph");
-  const perfRmsL   = document.getElementById("perfRmsL");
-  const perfRmsR   = document.getElementById("perfRmsR");
-  const perfPkL    = document.getElementById("perfPkL");
-  const perfPkR    = document.getElementById("perfPkR");
-  const perfDbL    = document.getElementById("perfDbL");
-  const perfDbR    = document.getElementById("perfDbR");
-  const specCv     = document.getElementById("perfSpec");
-  const specCtx2d  = specCv.getContext("2d");
+  // ---------- HUD inline (CPU / SR / LAT / CLK) al lado del ON/OFF ----------
+  const hudCpu   = document.getElementById("hudCpu");
+  const hudSR    = document.getElementById("hudSR");
+  const hudLat   = document.getElementById("hudLat");
+  const hudClock = document.getElementById("hudClock");
 
-  const toDB = (v) => (v <= 0.0001 ? -Infinity : 20 * Math.log10(v));
-  const dbToPct = (db) => Math.max(0, Math.min(1, (db + 60) / 60)) * 100;
+  // CPU = avgFrame / 16.7ms (proxy de carga del hilo de UI; el navegador no expone CPU/GPU real).
+  // Medimos con rAF cuando la pestaña está activa.
+  let lastFrameT = performance.now();
+  let avgFrame = 16.7;
+  function frameLoop(t) {
+    const dt = t - lastFrameT; lastFrameT = t;
+    if (dt > 0 && dt < 500) avgFrame = avgFrame * 0.9 + dt * 0.1;
+    requestAnimationFrame(frameLoop);
+  }
+  requestAnimationFrame(frameLoop);
 
-  let hpL = 0, hpR = 0;
-  let lastTickT = performance.now(), tickAvg = 33;
-  let lastAudioT = 0, lastWallT = 0, driftMs = 0;
-  const stateClass = { running: "run", suspended: "susp", closed: "closed" };
+  function setLoadClass(el, pct) {
+    el.classList.remove("warn", "bad");
+    if (pct >= 90) el.classList.add("bad");
+    else if (pct >= 65) el.classList.add("warn");
+  }
 
-  function perfTick() {
-    const now = performance.now();
-    const dt = now - lastTickT; lastTickT = now;
-    if (dt < 500) tickAvg = tickAvg * 0.85 + dt * 0.15;
-
+  function hudTick() {
     const actx = Engine.ctx;
     if (actx) {
-      const stt = actx.state;
-      perfState.textContent = stt.toUpperCase();
-      perfState.className = "perf-pill " + (stateClass[stt] || "");
-      perfSR.textContent = (actx.sampleRate / 1000).toFixed(1) + " kHz";
-      const base = (actx.baseLatency || 0) * 1000;
-      const outL = (actx.outputLatency || 0) * 1000;
-      perfLat.textContent = (base + outL).toFixed(1) + " ms";
-      perfClock.textContent = actx.currentTime.toFixed(2) + " s";
-
-      // DRIFT: comparacion entre el reloj de audio y el wallclock.
-      // ~0ms = sin glitches; positivo = el audio se quedo atras (xrun).
-      if (stt === "running" && lastAudioT > 0) {
-        const audioAdv = (actx.currentTime - lastAudioT) * 1000;
-        const wallAdv = now - lastWallT;
-        if (wallAdv < 500) {
-          const d = wallAdv - audioAdv;
-          driftMs = driftMs * 0.8 + d * 0.2;
-        }
-      }
-      lastAudioT = actx.currentTime;
-      lastWallT = now;
+      hudSR.textContent = (actx.sampleRate / 1000).toFixed(1) + "k";
+      const lat = ((actx.baseLatency || 0) + (actx.outputLatency || 0)) * 1000;
+      hudLat.textContent = lat.toFixed(1) + "ms";
+      hudClock.textContent = actx.currentTime.toFixed(1) + "s";
     }
-    perfFrame.textContent = tickAvg.toFixed(1) + " / " + (driftMs >= 0 ? "+" : "") + driftMs.toFixed(1) + " ms";
-    perfFrame.style.color = Math.abs(driftMs) > 5 ? "var(--danger)" : "";
-    perfGraph.textContent = Rack.modules.length + " mod · " + Patch.cables.length + " cbl";
-
-    const m = Engine.meter ? Engine.meter() : { peakL: 0, peakR: 0, rmsL: 0, rmsR: 0 };
-    hpL = Math.max(m.peakL, hpL * 0.92);
-    hpR = Math.max(m.peakR, hpR * 0.92);
-    perfRmsL.style.width = dbToPct(toDB(m.rmsL)) + "%";
-    perfRmsR.style.width = dbToPct(toDB(m.rmsR)) + "%";
-    perfPkL.style.left   = dbToPct(toDB(hpL)) + "%";
-    perfPkR.style.left   = dbToPct(toDB(hpR)) + "%";
-    const fmt = (v) => v <= 0.0005 ? "-inf" : (toDB(v) >= 0 ? "+" : "") + toDB(v).toFixed(1);
-    perfDbL.textContent = fmt(hpL);
-    perfDbR.textContent = fmt(hpR);
-    perfDbL.style.color = hpL >= 0.98 ? "var(--danger)" : "";
-    perfDbR.style.color = hpR >= 0.98 ? "var(--danger)" : "";
-
-    // Espectro: solo si visible (en background el navegador no compositea igual)
-    if (!document.hidden) {
-      const sp = Engine.spectrum ? Engine.spectrum() : null;
-      const W = specCv.width, H = specCv.height;
-      specCtx2d.clearRect(0, 0, W, H);
-      specCtx2d.fillStyle = "#060a08"; specCtx2d.fillRect(0, 0, W, H);
-      if (sp) {
-        const bars = 56, bw = W / bars, bins = sp.length;
-        for (let i = 0; i < bars; i++) {
-          const t0 = i / bars, t1 = (i + 1) / bars;
-          const lo = Math.floor(Math.pow(bins, t0));
-          const hi = Math.max(lo + 1, Math.floor(Math.pow(bins, t1)));
-          let max = 0;
-          for (let k = lo; k < hi && k < bins; k++) if (sp[k] > max) max = sp[k];
-          const v = max / 255;
-          const bh = v * (H - 2);
-          specCtx2d.fillStyle = v < 0.65 ? "#36d39a" : (v < 0.85 ? "#ffd23d" : "#ff4d5e");
-          specCtx2d.fillRect(i * bw, H - bh, Math.max(1, bw - 1), bh);
-        }
-      }
-    }
+    const cpuPct = Math.min(999, Math.round((avgFrame / 16.7) * 100));
+    hudCpu.textContent = cpuPct + "%";
+    setLoadClass(hudCpu, cpuPct);
   }
 
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) {
-      lastTickT = performance.now();
-      lastWallT = lastTickT;
-      lastAudioT = Engine.ctx ? Engine.ctx.currentTime : 0;
-    }
+    if (!document.hidden) lastFrameT = performance.now();
   });
 
-  setInterval(perfTick, 33);
+  setInterval(hudTick, 250);
+  hudTick();
 
   // ---------- patch inicial ----------
   const vco = Rack.add("vco");
@@ -372,13 +325,53 @@
   Patch.connect(fOut, sIn);
   Patch.connect(sThru, oIn);
 
-  const xs = [], ys = [];
-  Rack.modules.forEach((m) => {
-    xs.push(Layout.L(m), Layout.R(m));
-    const top = parseFloat(m.el.style.top) || 0;
-    ys.push(top, top + (m.el.offsetHeight || 340));
-  });
-  Viewport.centerOn((Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2, true);
+  // ---------- encuadrar todo el patch (reutilizable: init + "Centrar todo") ----------
+  function fitAll(immediate) {
+    if (!Rack.modules.length) return;
+    const xs = [], ys = [];
+    Rack.modules.forEach((m) => {
+      xs.push(Layout.L(m), Layout.R(m));
+      const top = parseFloat(m.el.style.top) || 0;
+      ys.push(top, top + (m.el.offsetHeight || 340));
+    });
+    Viewport.centerOn((Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2, immediate);
+  }
+  fitAll(true);
+
+  // T3.2: bbox de un conjunto de módulos + encuadre con zoom (selección o todo)
+  function boundsOf(mods) {
+    if (!mods || !mods.length) return null;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    mods.forEach((m) => {
+      const x = parseFloat(m.el.style.left) || 0, y = parseFloat(m.el.style.top) || 0;
+      const w = m.el.offsetWidth || 150, h = m.el.offsetHeight || 340;
+      minX = Math.min(minX, x); minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x + w); maxY = Math.max(maxY, y + h);
+    });
+    return { minX, minY, maxX, maxY };
+  }
+  function fitView() {
+    const sel = (Rack.selection && Rack.selection.size) ? [...Rack.selection] : Rack.modules;
+    const box = boundsOf(sel);
+    if (box) Viewport.fitTo(box, false);
+  }
+
+  // ---------- sprint 1+3: menú contextual, historial, persistencia, minimap ----------
+  if (window.ContextMenu) {
+    ContextMenu.onAddModuleHere = (cx, cy) => openMenu({ clientX: cx, clientY: cy });
+    ContextMenu.onCenterAll = () => fitView();
+    ContextMenu.onPaste = (cx, cy) => {
+      const clip = Rack.clipboard;
+      if (!clip || !clip.modules.length) return;
+      const w = cursorToWorld(cx, cy);
+      Rack.paste({ x: w.x - (clip.modules[0].x || 0), y: w.y - (clip.modules[0].y || 0) });
+    };
+    ContextMenu.init();
+  }
+  if (window.Selection) Selection.init(rackEl);  // marquee (Shift+arrastre)
+  if (window.Minimap) Minimap.init();            // T3.1 minimapa
+  if (window.History) History.init();            // snapshot base = patch inicial
+  if (window.Persistence) Persistence.init();     // botones, autosave, oferta de restaurar
 
   const hint = document.getElementById("hint");
   setTimeout(() => hint && (hint.style.opacity = "0"), 9000);
