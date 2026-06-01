@@ -34,6 +34,7 @@
   /* --- Métricas eurorack (cuadrado) --- */
   --hp: 16px;
   --radius: 2px;
+  --module-h: 340px;       /* alto fijo = alto de fila (ROW_H 360 - rail) */
   --shadow-panel: 0 1px 0 #000, 0 0 0 1px #000;
 }
 
@@ -54,6 +55,7 @@ body {
 .module {
   position: absolute;
   width: 150px;
+  height: var(--module-h);          /* todas las filas, misma altura */
   background: var(--panel-1);
   border: 1px solid var(--panel-edge);
   border-top-color: #2e2e2e;
@@ -77,6 +79,13 @@ body {
   border-radius: var(--radius) var(--radius) 0 0;
 }
 .module__header:active { cursor: grabbing; }
+.module__icon {
+  width: 14px; height: 14px;
+  color: var(--ink-dim);
+  display: grid; place-items: center;
+  flex: 0 0 auto;
+}
+.module__icon svg { width: 14px; height: 14px; display: block; }
 .module__title {
   font-size: 10px;
   font-weight: 700;
@@ -107,7 +116,10 @@ body {
   flex-direction: column;
   gap: 10px;
   flex: 1;
+  overflow: hidden;                 /* todo cabe dentro del alto fijo */
 }
+/* jacks/última fila anclados al fondo del panel (estilo eurorack) */
+.module__body > *:last-child { margin-top: auto; }
 
 /* tornillos eurorack */
 .module__screw {
@@ -273,6 +285,14 @@ body {
   box-shadow: inset 0 1px 1px #000;
 }
 .jack:hover { transform: scale(1.1); }
+/* placa de salida (identifica visualmente los outputs) */
+.jack-plate {
+  background: #13211b;
+  border: 1px solid #1f3a30;
+  border-radius: 3px;
+  padding: 3px;
+  display: grid; place-items: center;
+}
 .jack.is-output { border-color: var(--accent); }
 .jack.is-input  { border-color: var(--metal); }
 .jack.connected { border-color: #cfd3da; }
@@ -337,26 +357,55 @@ body {
 .switch-wave button.active { color: var(--accent); border-color: var(--metal-dark); background: #141414; }
 .switch-wave svg { width: 16px; height: 12px; }
 
-.fader-v {
-  -webkit-appearance: none; appearance: none;
-  writing-mode: vertical-lr;
-  direction: rtl;
-  width: 22px; height: 90px;
-  background: transparent;
+/* fader vertical custom — handler centrado en el riel */
+.fader { display: flex; justify-content: center; padding: 0 2px; }
+.fader__track {
+  position: relative;
+  width: 8px; height: 96px;
+  background: #060606;
+  border: 1px solid #000;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px #161616;
   cursor: ns-resize;
 }
-.fader-v::-webkit-slider-runnable-track {
-  width: 5px; background: #090909; border-radius: 1px;
-  box-shadow: inset 0 0 0 1px #000;
+.fader__fill {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(180deg, rgba(54,211,154,.35), rgba(54,211,154,.12));
+  border-radius: 4px;
 }
-.fader-v::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 20px; height: 11px;
-  background: #262626;
-  border: 1px solid #000; border-radius: 1px;
+.fader__thumb {
+  position: absolute; left: 50%; bottom: 0;
+  width: 22px; height: 13px;
+  background: linear-gradient(180deg, #3c3f47, #25272c);
+  border: 1px solid #000; border-radius: 2px;
+  transform: translate(-50%, 50%);
+  box-shadow: 0 1px 2px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.fader__thumb::after {
+  content: ""; position: absolute; left: 4px; right: 4px; top: 50%;
+  height: 1px; background: rgba(255,255,255,.18);
 }
 
 .tiny-label {
   font-size: 7.5px; letter-spacing: .08em; text-transform: uppercase;
   color: var(--ink-faint); text-align: center;
+}
+
+/* ---- MIXER: columnas alineadas, jacks al fondo, master al final ---- */
+.mix-strip {
+  gap: 6px;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  width: 100%;
+  flex: 1;
+}
+.mix-ch {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  flex: 0 0 auto;
+}
+.mix-ch > .row:last-child { margin-top: auto; }   /* el jack baja al fondo */
+.mix-master {
+  border-left: 1px solid rgba(255,255,255,.08);
+  padding-left: 8px; margin-left: 2px;
 }

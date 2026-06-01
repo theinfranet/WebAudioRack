@@ -9,16 +9,16 @@ class VCO extends Module {
     super({ title: "VCO · OSC", width: 154, ...def });
     const ctx = Engine.ctx;
     this.osc = ctx.createOscillator();
-    this.osc.type = "sawtooth";
-    this.osc.frequency.value = 110;
+    this.osc.type = "sine";
+    this.osc.frequency.value = 200;
     this.level = ctx.createGain();
     this.level.gain.value = 0.5;
     this.osc.connect(this.level);
     this.osc.start();
 
-    this.addWaveSwitch(this.row(), (t) => (this.osc.type = t), "sawtooth");
+    this.addWaveSwitch(this.row(), (t) => (this.osc.type = t), "sine");
     const k = this.row();
-    this.addKnob(k, { label: "FREQ", min: 16, max: 12000, value: 110, unit: "Hz", mapping: "exp", onChange: (v) => (this.osc.frequency.value = v) });
+    this.addKnob(k, { label: "FREQ", min: 16, max: 12000, value: 200, unit: "Hz", mapping: "exp", onChange: (v) => (this.osc.frequency.value = v) });
     this.addKnob(k, { label: "FINE", min: -100, max: 100, value: 0, unit: "c", bipolar: true, onChange: (v) => (this.osc.detune.value = v) });
     this.addKnob(this.row(), { label: "LEVEL", min: 0, max: 1, value: 0.5, onChange: (v) => (this.level.gain.value = v) });
 
@@ -255,24 +255,4 @@ class Sampler extends Module {
 }
 registerModule({ id: "sampler", name: "Sampler", cat: "Fuentes", desc: "Reproductor de muestras", make: (d) => new Sampler(d) });
 
-/* ---------------- MIC (MediaStreamAudioSource) ---------------- */
-class MicInput extends Module {
-  constructor(def) {
-    super({ title: "MIC IN", width: 140, ...def });
-    const ctx = Engine.ctx;
-    this.gain = ctx.createGain(); this.gain.gain.value = 1;
-    this.led = this.addLED(this.row(), "red");
-    this.addButton(this.row(), "ACTIVAR MIC", async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false } });
-        this.src = ctx.createMediaStreamSource(stream);
-        this.src.connect(this.gain);
-        this.led.set(1);
-      } catch (e) { alert("No se pudo acceder al micrófono: " + e.message); }
-    }, { wide: true });
-    this.addKnob(this.row(), { label: "GAIN", min: 0, max: 4, value: 1, onChange: (v) => (this.gain.gain.value = v) });
-    const p = this.row(this.body, "between");
-    this.addPort(p, "out", this.gain, { label: "OUT" });
-  }
-}
-registerModule({ id: "mic", name: "Mic Input", cat: "Fuentes", desc: "Entrada de micrófono", make: (d) => new MicInput(d) });
+/* (Audio In / Audio Out se fusionaron en el módulo DEVICE — ver advanced.js) */

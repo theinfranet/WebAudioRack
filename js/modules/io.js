@@ -13,14 +13,19 @@ class Scope extends Module {
     this.an.fftSize = 2048;
     this.in.connect(this.an);
     this.mode = "wave";
+    this.span = 1024;                 // muestras visibles (timebase)
     this.timeBuf = new Uint8Array(this.an.fftSize);
     this.freqBuf = new Uint8Array(this.an.frequencyBinCount);
 
     const sc = this.addScreen(this.row(), 168, 90);
     this.sc = sc;
     const ctr = this.row();
-    this.addButton(ctr, "WAVE", () => (this.mode = "wave"), { active: true });
-    this.addButton(ctr, "SPECTRUM", () => (this.mode = "freq"));
+    this.waveBtn = this.addButton(ctr, "WAVE", () => (this.mode = "wave"), { active: true });
+    this.freqBtn = this.addButton(ctr, "SPECTRUM", () => (this.mode = "freq"));
+    this.addKnob(this.row(), {
+      label: "TIME", min: 64, max: 2048, value: 1024, mapping: "exp",
+      format: (v) => Math.round(v) + " smp", onChange: (v) => (this.span = Math.round(v)),
+    });
 
     const p = this.row(this.body, "between");
     this.addPort(p, "in", this.in, { label: "IN" });
@@ -41,7 +46,8 @@ class Scope extends Module {
     if (this.mode === "wave") {
       this.an.getByteTimeDomainData(this.timeBuf);
       ctx.beginPath();
-      const step = this.timeBuf.length / w;
+      const span = Math.min(this.span || this.timeBuf.length, this.timeBuf.length);
+      const step = span / w;
       for (let x = 0; x < w; x++) {
         const v = this.timeBuf[Math.floor(x * step)] / 128 - 1;
         const y = h / 2 - v * (h / 2 - 4);
@@ -79,6 +85,11 @@ class Output extends Module {
     this.split.connect(this.anL, 0);
     this.split.connect(this.anR, 1);
 
+    // selector de interfaz de salida (setSinkId)
+    this.devSel = this.addSelect(this.row(), [{ value: "", label: "Salida por defecto" }], (id) => Engine.setSinkId(id), "");
+    this._refreshDevices();
+    if (navigator.mediaDevices) navigator.mediaDevices.ondevicechange = () => this._refreshDevices();
+
     const meter = this.addScreen(this.row(), 152, 26);
     this.meter = meter;
     this.addKnob(this.row(), { label: "MASTER", min: 0, max: 1.4, value: 0.8, onChange: (v) => (this.in.gain.value = v) });
@@ -94,6 +105,24 @@ class Output extends Module {
     this.addPort(p, "in", this.rIn, { label: "R" });
 
     this.raf(() => this.drawMeter());
+  }
+  async _refreshDevices() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+    try {
+      const devs = await navigator.mediaDevices.enumerateDevices();
+      const outs = devs.filter((d) => d.kind === "audiooutput");
+      const cur = this.devSel.value;
+      this.devSel.innerHTML = "";
+      const def = document.createElement("option");
+      def.value = ""; def.textContent = Engine.canSelectOutput ? "Salida por defecto" : "Salida (no configurable)";
+      this.devSel.appendChild(def);
+      outs.forEach((d, i) => {
+        const o = document.createElement("option");
+        o.value = d.deviceId; o.textContent = d.label || ("Salida " + (i + 1));
+        this.devSel.appendChild(o);
+      });
+      this.devSel.value = cur;
+    } catch (e) {}
   }
   rms(buf, an) { an.getFloatTimeDomainData(buf); let s = 0; for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i]; return Math.sqrt(s / buf.length); }
   drawMeter() {

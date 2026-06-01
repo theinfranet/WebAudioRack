@@ -1,0 +1,36 @@
+# Dependencias (no se usan en runtime; solo herramientas locales)
+node_modules/
+package-lock.json
+package.json
+yarn.lock
+pnpm-lock.yaml
+
+# Logs y temporales
+*.log
+npm-debug.log*
+.cache/
+tmp/
+*.tmp
+
+# Sistema operativo
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+desktop.ini
+
+# Editores / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# Builds / salidas (por si más adelante se agrega un bundler)
+dist/
+build/
+out/

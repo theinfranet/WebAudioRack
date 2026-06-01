@@ -36,6 +36,15 @@ class AudioEngine {
   get sampleRate() { return this.ctx ? this.ctx.sampleRate : 44100; }
   get now() { return this.ctx ? this.ctx.currentTime : 0; }
 
+  get canSelectOutput() { return !!(this.ctx && typeof this.ctx.setSinkId === "function"); }
+
+  /** Cambia la interfaz/dispositivo de salida (setSinkId del AudioContext). */
+  async setSinkId(deviceId) {
+    if (!this.canSelectOutput) return false;
+    try { await this.ctx.setSinkId(deviceId || ""); return true; }
+    catch (e) { console.warn("setSinkId:", e.message); return false; }
+  }
+
   /** Genera un AudioBuffer de ruido blanco reutilizable. */
   whiteNoiseBuffer(seconds = 2) {
     const len = this.sampleRate * seconds;
@@ -56,6 +65,43 @@ class AudioEngine {
       }
     }
     return buf;
+  }
+
+  /** Carga (una sola vez) el procesador AudioWorklet del bitcrusher. */
+  ensureWorklet() {
+    if (this._wl) return this._wl;
+    const code = `
+      class Bitcrusher extends AudioWorkletProcessor {
+        static get parameterDescriptors() {
+          return [
+            { name: 'bits', defaultValue: 8, minValue: 1, maxValue: 16 },
+            { name: 'reduction', defaultValue: 4, minValue: 1, maxValue: 50 },
+          ];
+        }
+        constructor() { super(); this.phase = 0; this.last = 0; }
+        process(inputs, outputs, params) {
+          const input = inputs[0], output = outputs[0];
+          if (!input || !input.length) return true;
+          for (let ch = 0; ch < output.length; ch++) {
+            const inp = input[ch] || input[0];
+            const out = output[ch];
+            for (let i = 0; i < out.length; i++) {
+              const bits = params.bits.length > 1 ? params.bits[i] : params.bits[0];
+              const red = params.reduction.length > 1 ? params.reduction[i] : params.reduction[0];
+              const step = Math.pow(0.5, bits);
+              this.phase += 1;
+              if (this.phase >= red) { this.phase = 0; this.last = step * Math.floor(inp[i] / step + 0.5); }
+              out[i] = this.last;
+            }
+          }
+          return true;
+        }
+      }
+      registerProcessor('bitcrusher', Bitcrusher);
+    `;
+    const url = URL.createObjectURL(new Blob([code], { type: "application/javascript" }));
+    this._wl = this.ctx.audioWorklet.addModule(url);
+    return this._wl;
   }
 
   /** Curva de saturación para el WaveShaper. */

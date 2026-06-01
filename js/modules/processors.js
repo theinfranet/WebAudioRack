@@ -229,10 +229,11 @@ class Split extends Module {
     this.in.connect(this.sp);
     this.sp.connect(this.l, 0);
     this.sp.connect(this.r, 1);
-    this.addPort(this.row(this.body, "between"), "in", this.in, { label: "ST IN" });
-    const p = this.row(this.body, "between");
-    this.addPort(p, "out", this.l, { label: "L" });
-    this.addPort(p, "out", this.r, { label: "R" });
+    const p = this.row(this.body, "between");      // IN izquierda, OUTs derecha
+    this.addPort(p, "in", this.in, { label: "ST IN" });
+    const outs = document.createElement("div"); outs.className = "row"; p.appendChild(outs);
+    this.addPort(outs, "out", this.l, { label: "L" });
+    this.addPort(outs, "out", this.r, { label: "R" });
   }
 }
 registerModule({ id: "split", name: "L/R Split", cat: "Estéreo", desc: "Separa estéreo en L y R", make: (d) => new Split(d) });
@@ -246,10 +247,11 @@ class Merge extends Module {
     this.mg = ctx.createChannelMerger(2);
     this.l.connect(this.mg, 0, 0);
     this.r.connect(this.mg, 0, 1);
-    const p = this.row(this.body, "between");
-    this.addPort(p, "in", this.l, { label: "L" });
-    this.addPort(p, "in", this.r, { label: "R" });
-    this.addPort(this.row(this.body, "between"), "out", this.mg, { label: "ST OUT" });
+    const p = this.row(this.body, "between");      // INs izquierda, OUT derecha
+    const ins = document.createElement("div"); ins.className = "row"; p.appendChild(ins);
+    this.addPort(ins, "in", this.l, { label: "L" });
+    this.addPort(ins, "in", this.r, { label: "R" });
+    this.addPort(p, "out", this.mg, { label: "ST OUT" });
   }
 }
 registerModule({ id: "merge", name: "L/R Merge", cat: "Estéreo", desc: "Une L y R en estéreo", make: (d) => new Merge(d) });

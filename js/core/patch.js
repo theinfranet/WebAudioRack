@@ -62,6 +62,8 @@ class Cable {
     this.color = color;
     this.path = null;
     this.glow = null;
+    this.plugA = null;
+    this.plugB = null;
   }
   /** Conecta de verdad en el grafo de audio. */
   wire() {
@@ -87,6 +89,7 @@ class PatchBay {
     this.drag = null;       // { fromOut, tempPath }
     this.hoverPort = null;
     this.tension = 0.3;     // 0 = muy flojo (cuelga), 1 = tenso (recto)
+    this.cableColor = null; // null = color automático por puerto
   }
 
   mount(surface, svg) {
@@ -115,20 +118,24 @@ class PatchBay {
   center(port) {
     const r = port.el.getBoundingClientRect();
     const s = this.surface.getBoundingClientRect();
+    const z = window.Viewport ? Viewport.zoom : 1;   // coords locales (sin escalar)
     return {
-      x: r.left - s.left + r.width / 2,
-      y: r.top - s.top + r.height / 2,
+      x: (r.left - s.left + r.width / 2) / z,
+      y: (r.top - s.top + r.height / 2) / z,
     };
   }
 
   static path(x1, y1, x2, y2) {
     const t = window.Patch ? window.Patch.tension : 0.3;
-    const dx = x2 - x1;
-    let sag = Math.min(220, 50 + Math.abs(dx) * 0.32 + Math.abs(y2 - y1) * 0.18);
-    sag *= (1 - t * 0.94);                 // tensión: más alto = más recto
+    const dx = x2 - x1, dy = y2 - y1;
+    const dist = Math.hypot(dx, dy);
+    // catenaria aproximada: caída proporcional al largo, control points
+    // insertados en horizontal para una curva de cable colgante natural.
+    let sag = (8 + dist * 0.5) * (1 - t * 0.9);
+    sag = Math.min(sag, 700);
+    const c1x = x1 + dx * 0.18, c2x = x2 - dx * 0.18;
     const c1y = y1 + sag, c2y = y2 + sag;
-    const mx = (x1 + x2) / 2;
-    return `M ${x1} ${y1} C ${mx} ${c1y}, ${mx} ${c2y}, ${x2} ${y2}`;
+    return `M ${x1} ${y1} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${x2} ${y2}`;
   }
 
   // ---------- arrastre ----------
@@ -168,7 +175,8 @@ class PatchBay {
     if (!this.drag) return;
     const a = this.center(this.drag.from);
     const s = this.surface.getBoundingClientRect();
-    const mx = e.clientX - s.left, my = e.clientY - s.top;
+    const z = window.Viewport ? Viewport.zoom : 1;
+    const mx = (e.clientX - s.left) / z, my = (e.clientY - s.top) / z;
 
     // resaltar puerto objetivo
     const el = document.elementFromPoint(e.clientX, e.clientY);
@@ -216,13 +224,14 @@ class PatchBay {
   connect(out, inp) {
     // una entrada solo admite un cable
     if (inp.connections.size) this.removeCable([...inp.connections][0]);
-    const cable = new Cable(out, inp, this._color(out));
+    const cable = new Cable(out, inp, this.cableColor || this._color(out));
     cable.wire();
     out.ensureAnalyser();
     out.connections.add(cable);
     inp.connections.add(cable);
     this.cables.push(cable);
     this._draw(cable);
+    this._updateCable(cable);
     out.el.classList.add("connected");
     inp.el.classList.add("connected");
     return cable;
@@ -234,6 +243,8 @@ class PatchBay {
     cable.in.connections.delete(cable);
     if (cable.path) cable.path.remove();
     if (cable.glow) cable.glow.remove();
+    if (cable.plugA) cable.plugA.remove();
+    if (cable.plugB) cable.plugB.remove();
     this.cables = this.cables.filter((c) => c !== cable);
     if (!cable.out.connections.size) cable.out.el.classList.remove("connected");
     if (!cable.in.connections.size) cable.in.el.classList.remove("connected");
@@ -250,17 +261,48 @@ class PatchBay {
     this.svg.appendChild(path);
     cable.path = path;
     cable.glow = null;
+    // conectores: un círculo del color del cable en cada extremo
+    const mkPlug = () => {
+      const c = document.createElementNS(ns, "circle");
+      c.setAttribute("class", "cable-plug");
+      c.setAttribute("r", "5");
+      c.setAttribute("fill", cable.color);
+      this.svg.appendChild(c);
+      return c;
+    };
+    cable.plugA = mkPlug();
+    cable.plugB = mkPlug();
   }
 
-  // ---------- bucle de animación: curvas + actividad ----------
+  /** Color de los cables NUEVOS (null = automático por puerto). */
+  setNewColor(color) { this.cableColor = color || null; }
+
+  /** Recolorea TODOS los cables existentes (null = volver a automático). */
+  recolorAll(color) {
+    for (const c of this.cables) {
+      const col = color || this._color(c.out);
+      c.color = col;
+      c.path.setAttribute("stroke", col);
+      if (c.plugA) c.plugA.setAttribute("fill", col);
+      if (c.plugB) c.plugB.setAttribute("fill", col);
+    }
+  }
+
+  // ---------- geometría de cables (solo bajo demanda) ----------
+  _updateCable(c) {
+    const a = this.center(c.out), b = this.center(c.in);
+    c.path.setAttribute("d", PatchBay.path(a.x, a.y, b.x, b.y));
+    if (c.plugA) { c.plugA.setAttribute("cx", a.x); c.plugA.setAttribute("cy", a.y); }
+    if (c.plugB) { c.plugB.setAttribute("cx", b.x); c.plugB.setAttribute("cy", b.y); }
+  }
+  /** Redibuja todos los cables. Llamar solo cuando algún módulo se mueve. */
+  redrawAll() { for (const c of this.cables) this._updateCable(c); }
+
+  // ---------- bucle ligero: solo actividad de LEDs de salida ----------
+  // (los cables NO se redibujan por frame: al hacer pan/zoom se mueven con
+  //  el transform de la superficie; solo se redibujan al mover un módulo)
   _loop() {
     const tick = () => {
-      // redibujar cables (módulos pueden moverse)
-      for (const c of this.cables) {
-        const a = this.center(c.out), b = this.center(c.in);
-        c.path.setAttribute("d", PatchBay.path(a.x, a.y, b.x, b.y));
-      }
-      // actividad de salidas -> solo el LED parpadea (los cables no tienen glow)
       for (const port of this.ports.values()) {
         if (!port.isOutput() || !port.actLed) continue;
         const lvl = port.analyser ? port.level() : 0;

@@ -1,21 +1,24 @@
 /* ============================================================
    Layout — grilla "magnética" estilo eurorack.
    - Los módulos se alinean a filas (rows) y a una grilla horizontal.
-   - No se permiten solapes: al colocar/arrastrar un módulo, empuja
-     a sus vecinos (derecha e izquierda) para hacerle sitio.
+   - Filas a tope (sin espacio extra): ROW_H = alto del módulo.
+   - Superficie enorme con un origen central → sensación de infinito.
+   - No se permiten solapes: al colocar/arrastrar empuja a los vecinos.
    ============================================================ */
 
 const Layout = {
-  GRID: 6,        // paso horizontal de la grilla
-  ROW_H: 360,     // alto de fila
-  ROW_PAD: 16,    // margen superior de la primera fila
-  GAP: 3,         // separación entre módulos (eurorack: casi a tope)
-  SURF_W: 4000,
+  GRID: 6,            // paso horizontal de la grilla
+  ROW_H: 340,         // alto de fila = alto del módulo (sin gap entre filas)
+  GAP: 2,             // separación horizontal entre módulos (casi a tope)
+  SURF_W: 12000,
+  SURF_H: 8000,
+  ORIGIN_X: 5500,     // punto "home" cerca del centro de la superficie
+  ORIGIN_Y: 3800,
 
-  snapX(x) { return Math.max(this.GRID, Math.round(x / this.GRID) * this.GRID); },
+  snapX(x) { return Math.max(0, Math.round(x / this.GRID) * this.GRID); },
   snapRow(y) {
-    const k = Math.max(0, Math.round((y - this.ROW_PAD) / this.ROW_H));
-    return this.ROW_PAD + k * this.ROW_H;
+    const k = Math.round((y - this.ORIGIN_Y) / this.ROW_H);   // filas arriba y abajo del origen
+    return this.ORIGIN_Y + k * this.ROW_H;
   },
 
   // helpers de geometría de un módulo
@@ -46,25 +49,24 @@ const Layout = {
     this.resolve(row, mod);
   },
 
-  /** Coloca un módulo nuevo en el primer hueco disponible, sin solapar. */
+  /** Coloca un módulo nuevo en el primer hueco libre desde el origen. */
   placeNew(mod) {
     const w = this.W(mod);
-    for (let i = 0; i < 16; i++) {
-      const row = this.ROW_PAD + i * this.ROW_H;
+    for (let i = 0; i < 24; i++) {
+      const row = this.ORIGIN_Y + i * this.ROW_H;
       const inRow = this.modulesInRow(row, mod);
-      const edge = inRow.length ? Math.max(...inRow.map((m) => this.R(m))) + this.GAP : this.GRID;
-      if (inRow.length === 0 || edge + w <= this.SURF_W - this.GRID) {
+      const edge = inRow.length ? Math.max(...inRow.map((m) => this.R(m))) + this.GAP : this.ORIGIN_X;
+      if (inRow.length === 0 || edge + w <= this.ORIGIN_X + this.SURF_W) {
         mod.__row = row;
         mod.el.style.left = this.snapX(edge) + "px";
         mod.el.style.top = row + "px";
         return;
       }
     }
-    const row = this.ROW_PAD;
-    mod.__row = row;
-    mod.el.style.left = this.GRID + "px";
-    mod.el.style.top = row + "px";
-    this.resolve(row, mod);
+    mod.__row = this.ORIGIN_Y;
+    mod.el.style.left = this.ORIGIN_X + "px";
+    mod.el.style.top = this.ORIGIN_Y + "px";
+    this.resolve(this.ORIGIN_Y, mod);
   },
 
   /** Empuja los vecinos de la misma fila para que no se solapen con el ancla. */
@@ -72,7 +74,6 @@ const Layout = {
     const others = this.modulesInRow(row, anchor);
     const aC = this.C(anchor);
 
-    // vecinos a la derecha: empujar hacia la derecha en cadena
     const right = others.filter((m) => this.C(m) >= aC).sort((p, q) => this.L(p) - this.L(q));
     let edge = this.R(anchor) + this.GAP;
     for (const m of right) {
@@ -80,14 +81,10 @@ const Layout = {
       edge = this.R(m) + this.GAP;
     }
 
-    // vecinos a la izquierda: empujar hacia la izquierda en cadena
     const left = others.filter((m) => this.C(m) < aC).sort((p, q) => this.L(q) - this.L(p));
     let ledge = this.L(anchor) - this.GAP;
     for (const m of left) {
-      if (this.R(m) > ledge) {
-        const nx = Math.max(this.GRID, ledge - this.W(m));
-        m.el.style.left = nx + "px";
-      }
+      if (this.R(m) > ledge) m.el.style.left = Math.max(0, ledge - this.W(m)) + "px";
       ledge = this.L(m) - this.GAP;
     }
   },

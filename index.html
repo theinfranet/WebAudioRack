@@ -15,31 +15,47 @@
       <div class="toolbar__brand"><span class="dot"></span>Web<span>Audio</span>Rack</div>
       <div class="add-wrap">
         <button id="addBtn" class="btn">+ Añadir módulo <kbd>↵</kbd></button>
-        <div id="addMenu" class="add-menu"></div>
       </div>
       <div class="tension-ctrl">
         <span class="tiny-label">TENSIÓN</span>
         <input id="tension" class="slider" type="range" min="0" max="100" value="30" />
       </div>
+      <div class="cable-ctrl">
+        <button id="cableBtn" class="btn">CABLE <span id="cableDot" class="cable-dot"></span> ▾</button>
+        <div id="cableMenu" class="cable-menu">
+          <div class="cable-menu__head">Cajón de cables</div>
+          <div id="cableList" class="cable-list"></div>
+          <div class="cable-menu__row">
+            <input id="cablePick" class="swatch-pick" type="color" value="#36d39a" title="Color personalizado" />
+            <span class="tiny-label">Personalizado</span>
+            <button id="applyAll" class="btn">Pintar todos</button>
+          </div>
+        </div>
+      </div>
+      <button id="smoothBtn" class="btn" title="Movimiento suave del lienzo on/off">SUAVE: OFF</button>
       <div class="toolbar__spacer"></div>
       <div id="status" class="toolbar__status"></div>
       <button id="power" class="power">○ OFF</button>
     </div>
 
     <div class="rack">
+      <div id="gridLayer" class="grid-layer"></div>
       <div id="surface" class="rack-surface">
         <svg id="cables" class="cable-layer"></svg>
-        <div id="hint" class="hint" style="transition:opacity 1s">
-          Pulsa <b>ON</b> para iniciar el audio · arrastra desde un <b>OUT</b> (verde) hacia un <b>IN</b> (azul) para cablear · clic en un cable para quitarlo
-        </div>
       </div>
     </div>
   </div>
+
+  <!-- panel de selección de módulos (nivel de página, por encima de los cables) -->
+  <div id="addBackdrop" class="add-backdrop"></div>
+  <div id="addMenu" class="add-menu"></div>
 
   <!-- core -->
   <script src="js/core/engine.js"></script>
   <script src="js/core/patch.js"></script>
   <script src="js/core/layout.js"></script>
+  <script src="js/core/viewport.js"></script>
+  <script src="js/core/icons.js"></script>
   <script src="js/core/module.js"></script>
   <script src="js/core/rack.js"></script>
   <!-- módulos -->
@@ -47,6 +63,7 @@
   <script src="js/modules/processors.js"></script>
   <script src="js/modules/mixers.js"></script>
   <script src="js/modules/io.js"></script>
+  <script src="js/modules/advanced.js"></script>
   <!-- app -->
   <script src="js/main.js"></script>
 </body>

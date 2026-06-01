@@ -26,13 +26,23 @@ class Module {
       <span class="module__screw bl"></span><span class="module__screw br"></span>
       <div class="module__header">
         <div class="module__title">${this.title}</div>
-        <button class="module__close" title="Quitar">×</button>
       </div>
       <div class="module__body"></div>`;
     this.el = el;
     this.body = el.querySelector(".module__body");
-    el.querySelector(".module__close").addEventListener("click", () => this.dispose());
     this._makeDraggable(el.querySelector(".module__header"));
+    // clic en el módulo => seleccionar (se borra con Delete/Backspace)
+    el.addEventListener("mousedown", () => { if (window.Rack) Rack.select(this); });
+  }
+
+  /** Inserta el icono lineal del módulo en el header. */
+  setIcon(inner) {
+    if (!inner) return;
+    const span = document.createElement("span");
+    span.className = "module__icon";
+    span.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+    const header = this.el.querySelector(".module__header");
+    header.insertBefore(span, header.firstChild);
   }
 
   // ---------- layout helpers ----------
@@ -114,10 +124,7 @@ class Module {
       window.addEventListener("mousemove", move); window.addEventListener("mouseup", up);
     });
     dial.addEventListener("dblclick", (e) => { e.stopPropagation(); set(value); });
-    dial.addEventListener("wheel", (e) => {
-      e.preventDefault();
-      set(fromNorm(Math.max(0, Math.min(1, toNorm(v) - Math.sign(e.deltaY) * 0.03))));
-    }, { passive: false });
+    // (sin rueda: el scroll/trackpad mueve el lienzo, no la perilla)
 
     render();
     if (onChange) onChange(v);
@@ -137,7 +144,15 @@ class Module {
     lbl.className = "port__label";
     lbl.textContent = opts.label || (dir === "out" ? "OUT" : "IN");
 
-    wrap.appendChild(jack);
+    // convención eurorack: las salidas llevan un rectángulo de fondo
+    if (dir === "out") {
+      const plate = document.createElement("div");
+      plate.className = "jack-plate";
+      plate.appendChild(jack);
+      wrap.appendChild(plate);
+    } else {
+      wrap.appendChild(jack);
+    }
     wrap.appendChild(lbl);
 
     let actLed = null;
@@ -238,16 +253,40 @@ class Module {
     return sw;
   }
 
-  // ---------- FADER vertical ----------
+  // ---------- FADER vertical (custom, handler centrado) ----------
   addFader(parent, def) {
-    const { min = 0, max = 1, value = 0, step = 0.01, onChange } = def;
-    const f = document.createElement("input");
-    f.type = "range"; f.className = "fader-v";
-    f.min = min; f.max = max; f.step = step; f.value = value;
-    f.addEventListener("input", () => onChange(parseFloat(f.value)));
-    f.addEventListener("mousedown", (e) => e.stopPropagation());
-    parent.appendChild(f);
-    return f;
+    const { min = 0, max = 1, value = 0, onChange } = def;
+    const wrap = document.createElement("div"); wrap.className = "fader";
+    const track = document.createElement("div"); track.className = "fader__track";
+    const fill = document.createElement("div"); fill.className = "fader__fill";
+    const thumb = document.createElement("div"); thumb.className = "fader__thumb";
+    track.appendChild(fill); track.appendChild(thumb); wrap.appendChild(track);
+    parent.appendChild(wrap);
+
+    let v = value;
+    const render = () => {
+      const t = Math.max(0, Math.min(1, (v - min) / (max - min)));
+      thumb.style.bottom = (t * 100).toFixed(2) + "%";
+      fill.style.height = (t * 100).toFixed(2) + "%";
+    };
+    const setFromY = (clientY) => {
+      const r = track.getBoundingClientRect();
+      const t = Math.max(0, Math.min(1, 1 - (clientY - r.top) / r.height));
+      v = min + t * (max - min);
+      render(); onChange(v);
+    };
+    track.addEventListener("mousedown", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      setFromY(e.clientY);
+      const mv = (ev) => setFromY(ev.clientY);
+      const up = () => { window.removeEventListener("mousemove", mv); window.removeEventListener("mouseup", up); };
+      window.addEventListener("mousemove", mv); window.addEventListener("mouseup", up);
+    });
+    track.addEventListener("dblclick", (e) => { e.stopPropagation(); v = value; render(); onChange(v); });
+    render();
+    const api = { el: wrap, get value() { return v; }, set: (x) => { v = x; render(); } };
+    this.controls.push(api);
+    return api;
   }
 
   // ---------- animación por módulo (scopes, etc.) ----------
@@ -261,7 +300,9 @@ class Module {
     let ox = 0, oy = 0, sx = 0, sy = 0, dragging = false;
     const move = (e) => {
       if (!dragging) return;
-      Layout.drag(this, ox + (e.clientX - sx), Math.max(0, oy + (e.clientY - sy)));
+      const z = window.Viewport ? Viewport.zoom : 1;
+      Layout.drag(this, ox + (e.clientX - sx) / z, Math.max(0, oy + (e.clientY - sy) / z));
+      if (window.Patch) Patch.redrawAll();   // los cables siguen al módulo
     };
     const up = () => { dragging = false; window.removeEventListener("mousemove", move); window.removeEventListener("mouseup", up); };
     handle.addEventListener("mousedown", (e) => {
