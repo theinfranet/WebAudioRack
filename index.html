@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WebAudioRack — Eurorack de Web Audio API</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/design-system.css" />
   <link rel="stylesheet" href="css/rack.css" />
 </head>
@@ -38,10 +38,62 @@
       <button id="power" class="power">○ OFF</button>
     </div>
 
+    <div class="perf-panel" id="perfPanel">
+      <div class="perf-stat" title="Estado del AudioContext">
+        <span class="perf-stat__lbl">ESTADO</span>
+        <span class="perf-stat__val"><span id="perfState" class="perf-pill">—</span></span>
+      </div>
+      <div class="perf-stat" title="Frecuencia de muestreo del AudioContext">
+        <span class="perf-stat__lbl">SR</span>
+        <span class="perf-stat__val" id="perfSR">—</span>
+      </div>
+      <div class="perf-stat" title="Latencia de salida reportada por la Web Audio API (base + output)">
+        <span class="perf-stat__lbl">LATENCIA</span>
+        <span class="perf-stat__val" id="perfLat">—</span>
+      </div>
+      <div class="perf-stat" title="Tiempo entre frames de la UI (objetivo aprox 16.7 ms a 60 fps)">
+        <span class="perf-stat__lbl">FRAME</span>
+        <span class="perf-stat__val" id="perfFrame">—</span>
+      </div>
+      <div class="perf-stat" title="Reloj del AudioContext en segundos. Avanza solo si el motor está procesando audio.">
+        <span class="perf-stat__lbl">CLOCK</span>
+        <span class="perf-stat__val" id="perfClock">—</span>
+      </div>
+      <div class="perf-stat" title="Módulos en el rack y cables conectados">
+        <span class="perf-stat__lbl">GRAFO</span>
+        <span class="perf-stat__val" id="perfGraph">—</span>
+      </div>
+      <div class="perf-meters" title="Nivel de salida master (L/R). Barra verde = RMS, marca blanca = pico.">
+        <div class="perf-meters__lbl">OUT</div>
+        <div class="perf-meters__rows">
+          <div class="perf-meter">
+            <span class="perf-meter__ch">L</span>
+            <div class="perf-meter__bar"><div id="perfRmsL" class="perf-meter__rms"></div><div id="perfPkL" class="perf-meter__peak"></div></div>
+            <span class="perf-meter__db" id="perfDbL">-inf</span>
+          </div>
+          <div class="perf-meter">
+            <span class="perf-meter__ch">R</span>
+            <div class="perf-meter__bar"><div id="perfRmsR" class="perf-meter__rms"></div><div id="perfPkR" class="perf-meter__peak"></div></div>
+            <span class="perf-meter__db" id="perfDbR">-inf</span>
+          </div>
+        </div>
+      </div>
+      <div class="perf-spectrum" title="Espectro del master: qué frecuencias se están enviando al destino de audio.">
+        <canvas id="perfSpec" width="280" height="44"></canvas>
+      </div>
+    </div>
+
     <div class="rack">
       <div id="gridLayer" class="grid-layer"></div>
       <div id="surface" class="rack-surface">
         <svg id="cables" class="cable-layer"></svg>
+      </div>
+      <div id="zoomBar" class="zoom-bar">
+        <div id="zoomValue" class="zoom-bar__value">100%</div>
+        <div id="zoomTrack" class="zoom-bar__track">
+          <div id="zoomFill" class="zoom-bar__fill"></div>
+          <div id="zoomThumb" class="zoom-bar__thumb"></div>
+        </div>
       </div>
     </div>
   </div>

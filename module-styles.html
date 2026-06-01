@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebAudioRack — 20 estilos base de módulo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: #050505; color: #e2e2e2;
+      font-family: "Space Mono", monospace; }
+    body { padding: 36px 24px 80px; }
+
+    h1 { font-size: 20px; font-weight: 700; margin: 0 0 6px; }
+    .sub { color: #8a8a8a; font-size: 12px; margin: 0 0 30px; max-width: 760px; line-height: 1.55; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 22px;
+    }
+
+    /* Tarjeta contenedora: meta + módulo */
+    .card { display: flex; flex-direction: column; gap: 10px; }
+    .card__meta { color: #545454; font-size: 11px; line-height: 1.4; }
+    .card__num { color: #888; font-weight: 700; letter-spacing: .14em; }
+    .card__name { color: #e2e2e2; font-size: 12.5px; font-weight: 700; }
+    .card__vibe { color: #707070; font-size: 11px; }
+
+    /* ============================================================
+       Estructura genérica del módulo. Cada .m-XX la sobreescribe.
+       ============================================================ */
+    .mod {
+      width: 100%; max-width: 200px;
+      height: 280px;
+      position: relative;
+      display: flex; flex-direction: column;
+      font-family: "Space Mono", monospace;
+      overflow: hidden;
+    }
+    .mod__hd {
+      padding: 6px 10px;
+      display: flex; align-items: center; gap: 6px;
+      font-size: 9.5px; font-weight: 700;
+      letter-spacing: .14em; text-transform: uppercase;
+    }
+    .mod__hd .ti { font-size: 10px; opacity: .7; }
+    .mod__bd {
+      padding: 12px 10px 14px;
+      flex: 1;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .row { display: flex; gap: 10px; justify-content: center; }
+    .knob { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 60px; }
+    .dial {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: #1e1e1e; border: 1px solid #000;
+      box-shadow: inset 0 0 0 1px #2a2a2a;
+      position: relative;
+    }
+    .dial::before {
+      content: ""; position: absolute; inset: 30%;
+      border-radius: 50%; background: #121212; border: 1px solid #000;
+    }
+    .dial::after {
+      content: ""; position: absolute; left: 50%; top: 50%;
+      width: 2.5px; height: 16px; background: #e2e2e2;
+      border-radius: 1px; transform-origin: 50% 100%;
+      transform: translate(-50%, -100%) rotate(-30deg);
+    }
+    .lbl { font-size: 7.5px; letter-spacing: .12em; text-transform: uppercase; opacity: .7; }
+    .val { font-size: 8px; opacity: .55; }
+    .screen {
+      background: #040404; border: 1px solid #000;
+      box-shadow: inset 0 0 0 1px #161616;
+      padding: 5px 7px; font-size: 10px;
+      color: #36d39a; text-align: center;
+    }
+    .jacks { display: flex; gap: 6px; justify-content: space-around; margin-top: auto; }
+    .jack { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .jack__r {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #161616; border: 2px solid #909090;
+      display: grid; place-items: center;
+    }
+    .jack__r::after {
+      content: ""; width: 6px; height: 6px; border-radius: 50%;
+      background: #040404; box-shadow: inset 0 1px 1px #000;
+    }
+    .jack__r.out { border-color: #36d39a; }
+    .jack__l { font-size: 7px; letter-spacing: .12em; opacity: .55; }
+    /* Tornillos */
+    .screw {
+      position: absolute; width: 6px; height: 6px; border-radius: 50%;
+      background: #2a2a2a; box-shadow: inset 0 0 0 1px #000;
+    }
+    .screw::after {
+      content: ""; position: absolute; inset: 1px;
+      background: linear-gradient(45deg, transparent 44%, #1a1a1a 44% 56%, transparent 56%);
+    }
+    .screw.tl { top: 3px; left: 3px; } .screw.tr { top: 3px; right: 3px; }
+    .screw.bl { bottom: 3px; left: 3px; } .screw.br { bottom: 3px; right: 3px; }
+
+    /* ============================================================
+       01 · Eurorack negro (referencia / estilo actual)
+       ============================================================ */
+    .m-01 { background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 2px; box-shadow: 0 1px 0 #000, 0 0 0 1px #000; }
+    .m-01 .mod__hd { background: #0d0d0d; border-bottom: 1px solid #000; color: #8a8a8a; }
+
+    /* 02 · Aluminio claro (Make Noise blanco) */
+    .m-02 { background: #d6d4cf; color: #0a0a0a; border: 1px solid #5a5854; border-radius: 2px; }
+    .m-02 .mod__hd { color: #1a1a1a; border-bottom: 1px solid #8a8780; }
+    .m-02 .dial { background: #1a1a1a; box-shadow: inset 0 0 0 1px #444; }
+    .m-02 .dial::before { background: #0a0a0a; }
+    .m-02 .screen { background: #1a1a1a; color: #ffd23d; box-shadow: inset 0 0 0 1px #444; }
+    .m-02 .jack__r { background: #1a1a1a; border-color: #444; }
+    .m-02 .screw { background: #8a8780; }
+
+    /* 03 · Crema vintage (ARP/Roland System) */
+    .m-03 { background: #eee6d3; color: #2a1f12; border: 1px solid #8a7a55; border-radius: 1px; }
+    .m-03 .mod__hd { color: #3a2a1a; border-bottom: 1px solid #b0a07a; letter-spacing: .2em; }
+    .m-03 .dial { background: #2a2018; box-shadow: inset 0 0 0 1px #4a3a2a; border-color: #1a120a; }
+    .m-03 .dial::before { background: #1a120a; border-color: #0a0604; }
+    .m-03 .dial::after { background: #e8d8a8; }
+    .m-03 .screen { background: #1a1208; color: #ff9d4a; box-shadow: inset 0 0 0 1px #3a2a1a; }
+    .m-03 .jack__r { background: #1a120a; border-color: #6a5a3a; }
+    .m-03 .jack__r.out { border-color: #d68f3a; }
+    .m-03 .screw { background: #6a5a3a; }
+
+    /* 04 · Brutalist mono (alto contraste) */
+    .m-04 { background: #ffffff; color: #000; border: 2px solid #000; border-radius: 0; }
+    .m-04 .mod__hd { background: #000; color: #fff; border-bottom: 2px solid #000; }
+    .m-04 .dial { background: #000; box-shadow: none; border: 2px solid #000; }
+    .m-04 .dial::before { background: #fff; border: 2px solid #000; }
+    .m-04 .dial::after { background: #fff; }
+    .m-04 .screen { background: #000; color: #fff; box-shadow: none; border: 2px solid #000; }
+    .m-04 .jack__r { background: #fff; border: 2px solid #000; }
+    .m-04 .jack__r.out { background: #000; }
+    .m-04 .jack__r.out::after { background: #fff; box-shadow: none; }
+    .m-04 .screw { display: none; }
+
+    /* 05 · Walnut warm — paneles con calidez de madera */
+    .m-05 { background: linear-gradient(180deg, #2a1a10 0%, #3a2418 50%, #2a1a10 100%); color: #f5d8a8; border: 1px solid #1a0c06; border-radius: 3px; }
+    .m-05 .mod__hd { color: #f0c478; border-bottom: 1px solid #4a3020; }
+    .m-05 .dial { background: #d68f3a; border-color: #1a0c06; box-shadow: inset 0 0 0 1px #f0c478; }
+    .m-05 .dial::before { background: #2a1a10; border-color: #1a0c06; }
+    .m-05 .dial::after { background: #1a0c06; }
+    .m-05 .screen { background: #0a0604; color: #ffd23d; box-shadow: inset 0 0 0 1px #4a3020; }
+    .m-05 .jack__r { background: #0a0604; border-color: #b08648; }
+    .m-05 .screw { background: #6a4828; }
+
+    /* 06 · Acero cepillado */
+    .m-06 { background:
+      repeating-linear-gradient(180deg, #5a5a5a 0px, #6a6a6a 2px, #5a5a5a 4px),
+      #5a5a5a; color: #0a0a0a; border: 1px solid #2a2a2a; border-radius: 2px;
+    }
+    .m-06 .mod__hd { color: #0a0a0a; border-bottom: 1px solid #2a2a2a; }
+    .m-06 .dial { background: #1a1a1a; box-shadow: inset 0 0 0 1px #555; }
+    .m-06 .screen { background: #0a0a0a; color: #36d39a; }
+    .m-06 .jack__r { background: #1a1a1a; border-color: #2a2a2a; }
+    .m-06 .screw { background: #9a9a9a; box-shadow: inset 0 0 0 1px #2a2a2a; }
+
+    /* 07 · Moog tributo — negro con dorado */
+    .m-07 { background: #0a0a0a; color: #d4a648; border: 1px solid #1a1a1a; border-radius: 2px; }
+    .m-07 .mod__hd { background: #1a1408; color: #d4a648; border-bottom: 1px solid #d4a648; letter-spacing: .2em; }
+    .m-07 .dial { background: #1a1a1a; border-color: #000; box-shadow: inset 0 0 0 1px #d4a648; }
+    .m-07 .dial::before { background: #0a0a0a; border-color: #1a1a1a; }
+    .m-07 .dial::after { background: #d4a648; }
+    .m-07 .screen { background: #050505; color: #d4a648; box-shadow: inset 0 0 0 1px #4a3a18; }
+    .m-07 .jack__r { background: #050505; border-color: #d4a648; }
+    .m-07 .screw { background: #d4a648; box-shadow: inset 0 0 0 1px #000; }
+
+    /* 08 · Buchla colorful — banana jacks, panel claro */
+    .m-08 { background: #e8e2d6; color: #1a1a1a; border: 1px solid #7a6f5a; border-radius: 2px; }
+    .m-08 .mod__hd { color: #6b1a4a; border-bottom: 1px solid #b0a484; }
+    .m-08 .dial { background: #1a1a1a; box-shadow: inset 0 0 0 1px #4a4a4a; }
+    .m-08 .dial::after { background: #ff5e8a; }
+    .m-08 .screen { background: #1a1a1a; color: #5dd4a5; }
+    .m-08 .jack__r { background: #1a1a1a; border-color: #ff7a3d; }
+    .m-08 .jack__r:nth-child(2) { border-color: #5d8fff; }
+    .m-08 .jack__r.out { border-color: #c46bff; }
+    .m-08 .screw { background: #6b1a4a; }
+
+    /* 09 · Mutable Instruments — blanco minimal */
+    .m-09 { background: #f5f3ee; color: #1a1a1a; border: 1px solid #c5c0b0; border-radius: 1px; }
+    .m-09 .mod__hd { color: #1a1a1a; font-weight: 700; letter-spacing: .18em; border-bottom: 1px solid #d8d4c5; }
+    .m-09 .dial { background: #f5f3ee; border: 1px solid #1a1a1a; box-shadow: none; }
+    .m-09 .dial::before { background: #1a1a1a; border-color: #1a1a1a; }
+    .m-09 .dial::after { background: #1a1a1a; }
+    .m-09 .screen { background: #1a1a1a; color: #f5f3ee; box-shadow: none; }
+    .m-09 .jack__r { background: #f5f3ee; border-color: #1a1a1a; }
+    .m-09 .jack__r::after { background: #1a1a1a; }
+    .m-09 .jack__r.out { background: #1a1a1a; }
+    .m-09 .jack__r.out::after { background: #f5f3ee; }
+    .m-09 .screw { display: none; }
+
+    /* 10 · Doepfer A-100 — plata estándar */
+    .m-10 { background: #b8b6b0; color: #0a0a0a; border: 1px solid #4a4a45; border-radius: 1px; }
+    .m-10 .mod__hd { color: #0a0a0a; border-bottom: 1px solid #707070; font-weight: 400; }
+    .m-10 .dial { background: #2a2a2a; box-shadow: inset 0 0 0 1px #555; }
+    .m-10 .dial::after { background: #c4c4c4; }
+    .m-10 .screen { background: #1a1a1a; color: #ff9d4a; }
+    .m-10 .jack__r { background: #1a1a1a; border-color: #555; }
+    .m-10 .screw { background: #707070; box-shadow: inset 0 0 0 1px #2a2a2a; }
+
+    /* 11 · Erica Synths — negro con rojo */
+    .m-11 { background: #050505; color: #ff4040; border: 1px solid #1a0808; border-radius: 1px; }
+    .m-11 .mod__hd { background: #1a0606; color: #ff4040; border-bottom: 1px solid #ff4040; }
+    .m-11 .dial { background: #1a1a1a; box-shadow: inset 0 0 0 1px #ff4040; }
+    .m-11 .dial::after { background: #ff4040; }
+    .m-11 .screen { background: #1a0606; color: #ff4040; box-shadow: inset 0 0 0 1px #4a1a1a; }
+    .m-11 .jack__r { background: #050505; border-color: #707070; }
+    .m-11 .jack__r.out { border-color: #ff4040; }
+    .m-11 .screw { background: #ff4040; box-shadow: inset 0 0 0 1px #000; }
+
+    /* 12 · Vermona-ish — negro con cian luminoso */
+    .m-12 { background: #060810; color: #5deaff; border: 1px solid #0a1422; border-radius: 2px; }
+    .m-12 .mod__hd { color: #5deaff; border-bottom: 1px solid #1a3040; letter-spacing: .2em; }
+    .m-12 .dial { background: #060810; border: 1px solid #5deaff; box-shadow: 0 0 6px rgba(93,234,255,.3); }
+    .m-12 .dial::before { background: #060810; border-color: #5deaff; }
+    .m-12 .dial::after { background: #5deaff; }
+    .m-12 .screen { background: #020306; color: #5deaff; box-shadow: 0 0 8px rgba(93,234,255,.25), inset 0 0 0 1px #1a3040; }
+    .m-12 .jack__r { background: #020306; border-color: #5deaff; }
+    .m-12 .screw { background: #1a3040; }
+
+    /* 13 · Modern card — softer dark con acentos sutiles */
+    .m-13 { background: #161616; color: #d4d4d4; border: 1px solid #222; border-radius: 6px; }
+    .m-13 .mod__hd { background: #1a1a1a; color: #8a8a8a; border-bottom: 1px solid #222; border-radius: 6px 6px 0 0; }
+    .m-13 .dial { background: #222; border-color: #0a0a0a; box-shadow: inset 0 0 0 1px #2a2a2a; }
+    .m-13 .dial::before { background: #161616; }
+    .m-13 .screen { background: #0a0a0a; color: #7eb4ff; border-radius: 4px; }
+    .m-13 .jack__r { background: #0a0a0a; border-color: #555; }
+    .m-13 .jack__r.out { border-color: #7eb4ff; }
+    .m-13 .screw { display: none; }
+
+    /* 14 · Wireframe outlined — lienzo */
+    .m-14 { background: transparent; color: #e2e2e2; border: 1px solid #444; border-radius: 0; }
+    .m-14 .mod__hd { color: #e2e2e2; border-bottom: 1px dashed #444; }
+    .m-14 .dial { background: transparent; border: 1px solid #444; box-shadow: none; }
+    .m-14 .dial::before { background: transparent; border-color: #444; }
+    .m-14 .dial::after { background: #e2e2e2; }
+    .m-14 .screen { background: transparent; color: #e2e2e2; border: 1px dashed #444; box-shadow: none; }
+    .m-14 .jack__r { background: transparent; border-color: #444; }
+    .m-14 .jack__r::after { background: transparent; box-shadow: inset 0 0 0 1px #444; }
+    .m-14 .screw { display: none; }
+
+    /* 15 · DIN industrial — amarillo / negro */
+    .m-15 { background: #f3c100; color: #0a0a0a; border: 2px solid #0a0a0a; border-radius: 0; }
+    .m-15 .mod__hd { background: #0a0a0a; color: #f3c100; border-bottom: 2px solid #0a0a0a; letter-spacing: .18em; }
+    .m-15 .dial { background: #0a0a0a; border: 2px solid #0a0a0a; box-shadow: none; }
+    .m-15 .dial::before { background: #f3c100; border-color: #0a0a0a; }
+    .m-15 .dial::after { background: #f3c100; }
+    .m-15 .screen { background: #0a0a0a; color: #f3c100; }
+    .m-15 .jack__r { background: #0a0a0a; border-color: #0a0a0a; }
+    .m-15 .screw { background: #0a0a0a; }
+
+    /* 16 · Neon outline — magenta */
+    .m-16 { background: #0a0612; color: #ff3dc4; border: 1px solid #ff3dc4; border-radius: 2px; box-shadow: 0 0 0 1px rgba(255,61,196,.15), inset 0 0 12px rgba(255,61,196,.08); }
+    .m-16 .mod__hd { color: #ff3dc4; border-bottom: 1px solid #ff3dc4; letter-spacing: .2em; }
+    .m-16 .dial { background: #0a0612; border: 1px solid #ff3dc4; box-shadow: 0 0 6px rgba(255,61,196,.3); }
+    .m-16 .dial::before { background: #0a0612; border-color: #ff3dc4; }
+    .m-16 .dial::after { background: #ff3dc4; }
+    .m-16 .screen { background: #050208; color: #ff3dc4; box-shadow: 0 0 6px rgba(255,61,196,.25), inset 0 0 0 1px #4a1a3a; }
+    .m-16 .jack__r { background: #050208; border-color: #ff3dc4; }
+    .m-16 .screw { background: #ff3dc4; }
+
+    /* 17 · Paper / sketch — feel hecho a mano */
+    .m-17 { background: #f5efdd; color: #2a2014; border: 1px dashed #8a7a55; border-radius: 6px; }
+    .m-17 .mod__hd { color: #2a2014; border-bottom: 1px dashed #8a7a55; font-weight: 400; letter-spacing: .08em; }
+    .m-17 .dial { background: #f5efdd; border: 1px solid #2a2014; box-shadow: none; }
+    .m-17 .dial::before { background: #f5efdd; border-color: #2a2014; }
+    .m-17 .dial::after { background: #2a2014; }
+    .m-17 .screen { background: #f5efdd; color: #2a2014; border: 1px dashed #2a2014; box-shadow: none; }
+    .m-17 .jack__r { background: #f5efdd; border-color: #2a2014; border-style: dashed; }
+    .m-17 .jack__r::after { background: #2a2014; }
+    .m-17 .screw { display: none; }
+
+    /* 18 · Frosted glass — translúcido */
+    .m-18 { background: rgba(40,42,60,.55); backdrop-filter: blur(8px); color: #e2e2e2; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+    .m-18 .mod__hd { color: #d2d2d2; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .m-18 .dial { background: rgba(20,22,30,.6); border: 1px solid rgba(255,255,255,.1); box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
+    .m-18 .dial::before { background: rgba(10,10,15,.7); border-color: rgba(255,255,255,.08); }
+    .m-18 .screen { background: rgba(0,0,0,.45); color: #9be1ff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+    .m-18 .jack__r { background: rgba(0,0,0,.45); border-color: rgba(255,255,255,.3); }
+    .m-18 .screw { display: none; }
+
+    /* 19 · Fibra de carbono — patrón fino */
+    .m-19 { color: #d4d4d4; border: 1px solid #050505; border-radius: 2px;
+      background:
+        repeating-linear-gradient(45deg, #0e0e0e 0px, #161616 2px, #0e0e0e 4px),
+        #0e0e0e;
+    }
+    .m-19 .mod__hd { background: rgba(0,0,0,.4); color: #c5c5c5; border-bottom: 1px solid #050505; }
+    .m-19 .dial { background: #161616; box-shadow: inset 0 0 0 1px #2a2a2a; }
+    .m-19 .screen { background: #050505; color: #36d39a; }
+    .m-19 .jack__r { background: #050505; border-color: #707070; }
+    .m-19 .screw { background: #2a2a2a; }
+
+    /* 21 · Metal cuadrado — chasis industrial, todo recto */
+    .m-21 {
+      color: #1a1a1a; border-radius: 0;
+      border: 1px solid #1a1a1a;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,.05) 0%, transparent 50%, rgba(0,0,0,.18) 100%),
+        repeating-linear-gradient(90deg, #9a9a9a 0px, #a8a8a8 1px, #9a9a9a 2px),
+        #a0a0a0;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.35),
+        inset 0 -1px 0 rgba(0,0,0,.45),
+        inset 1px 0 0 rgba(255,255,255,.18),
+        inset -1px 0 0 rgba(0,0,0,.25);
+    }
+    .m-21 .mod__hd {
+      background: linear-gradient(180deg, #444 0%, #2a2a2a 100%);
+      color: #e2e2e2;
+      border-bottom: 1px solid #1a1a1a;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 #000;
+      letter-spacing: .22em;
+      font-weight: 700;
+      border-radius: 0;
+    }
+    .m-21 .mod__bd { padding: 14px 12px 16px; }
+    .m-21 .dial {
+      width: 38px; height: 38px;
+      background:
+        radial-gradient(circle at 35% 30%, #5a5a5a 0%, #2a2a2a 60%, #111 100%);
+      border: 1px solid #000;
+      border-radius: 50%;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.18),
+        0 1px 0 rgba(255,255,255,.4);
+    }
+    .m-21 .dial::before {
+      background: radial-gradient(circle at 30% 30%, #2a2a2a, #050505);
+      border: 1px solid #000;
+    }
+    .m-21 .dial::after { background: #f0f0f0; }
+    .m-21 .lbl, .m-21 .val { color: #1a1a1a; }
+    .m-21 .lbl { font-weight: 700; letter-spacing: .18em; opacity: .85; }
+    .m-21 .val { opacity: .55; }
+    .m-21 .screen {
+      background: #050505;
+      color: #ff9d3d;
+      border: 1px solid #000;
+      border-radius: 0;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.05),
+        inset 0 0 0 1px #2a2a2a,
+        0 1px 0 rgba(255,255,255,.4);
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+    .m-21 .jack__r {
+      background: #050505;
+      border: 2px solid #3a3a3a;
+      border-radius: 50%;
+      box-shadow:
+        inset 0 0 0 1px #000,
+        0 1px 0 rgba(255,255,255,.35);
+    }
+    .m-21 .jack__r.out { border-color: #1a1a1a; box-shadow: inset 0 0 0 1px #000, 0 0 0 2px #2a2a2a, 0 1px 0 rgba(255,255,255,.4); }
+    .m-21 .jack__l { color: #1a1a1a; font-weight: 700; opacity: .8; }
+    .m-21 .screw {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #d0d0d0, #5a5a5a 70%, #2a2a2a 100%);
+      box-shadow: inset 0 0 0 1px #000, 0 1px 0 rgba(255,255,255,.4);
+    }
+    .m-21 .screw::after {
+      background: linear-gradient(45deg, transparent 42%, #000 42% 58%, transparent 58%);
+      opacity: .8;
+    }
+    .m-21 .screw.tl { top: 4px; left: 4px; }
+    .m-21 .screw.tr { top: 4px; right: 4px; }
+    .m-21 .screw.bl { bottom: 4px; left: 4px; }
+    .m-21 .screw.br { bottom: 4px; right: 4px; }
+
+    /* 20 · Pastel synth — playful y moderno */
+    .m-20 { background: #f0e7f5; color: #4a2a55; border: 1px solid #c9a8d8; border-radius: 8px; }
+    .m-20 .mod__hd { background: #c9a8d8; color: #2a1238; border-bottom: 1px solid #b894c5; border-radius: 8px 8px 0 0; }
+    .m-20 .dial { background: #4a2a55; border-color: #2a1238; box-shadow: inset 0 0 0 1px #6a4a75; }
+    .m-20 .dial::before { background: #f0e7f5; border-color: #c9a8d8; }
+    .m-20 .dial::after { background: #ffd23d; }
+    .m-20 .screen { background: #2a1238; color: #ff9bd2; box-shadow: inset 0 0 0 1px #4a2a55; border-radius: 4px; }
+    .m-20 .jack__r { background: #2a1238; border-color: #c9a8d8; }
+    .m-20 .jack__r.out { border-color: #ffd23d; }
+    .m-20 .screw { background: #b894c5; }
+  </style>
+</head>
+<body>
+  <h1>20 estilos base de módulo</h1>
+  <p class="sub">Mismo módulo (header + 2 knobs + readout + 3 jacks) renderizado con distintos paneles, paletas y trazos. Todos en Space Mono. Cuando elijas, lo trasladamos al CSS real del proyecto.</p>
+
+  <div class="grid">
+    <!-- Patrón repetido. Cambia solo .m-NN -->
+    <!-- Generamos los 20 con el mismo marcado interno -->
+    <!-- 01 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">01 · referencia</div><div class="card__name">Eurorack negro</div><div class="card__vibe">Actual. Negro plano + ink dim.</div></div>
+      <div class="mod m-01"><div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 02 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">02 · aluminio</div><div class="card__name">Make Noise blanco</div><div class="card__vibe">Panel claro, controles oscuros.</div></div>
+      <div class="mod m-02"><div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 03 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">03 · crema</div><div class="card__name">ARP / vintage</div><div class="card__vibe">Crema cálida con texto sepia.</div></div>
+      <div class="mod m-03"><div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 04 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">04 · brutalist</div><div class="card__name">Mono alto contraste</div><div class="card__vibe">Blanco + negro, borde grueso.</div></div>
+      <div class="mod m-04">
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 05 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">05 · walnut</div><div class="card__name">Madera cálida</div><div class="card__vibe">Tonos nogal, latón y ámbar.</div></div>
+      <div class="mod m-05"><div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 06 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">06 · acero</div><div class="card__name">Brushed steel</div><div class="card__vibe">Vetas verticales, neutro gris.</div></div>
+      <div class="mod m-06"><div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 07 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">07 · moog</div><div class="card__name">Negro + dorado</div><div class="card__vibe">Tributo a paneles vintage Moog.</div></div>
+      <div class="mod m-07"><div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 08 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">08 · buchla</div><div class="card__name">Banana jacks colour</div><div class="card__vibe">Panel claro + jacks codificados por color.</div></div>
+      <div class="mod m-08"><div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 09 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">09 · mutable</div><div class="card__name">Minimal blanco</div><div class="card__vibe">Inspirado en Plaits/Marbles. Línea fina, tipografía limpia.</div></div>
+      <div class="mod m-09">
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">10 · doepfer</div><div class="card__name">Plata estándar</div><div class="card__vibe">El "rack genérico" europeo.</div></div>
+      <div class="mod m-10"><div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 11 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">11 · erica</div><div class="card__name">Rojo industrial</div><div class="card__vibe">Negro mate con rojo crítico.</div></div>
+      <div class="mod m-11"><div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 12 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">12 · neón cian</div><div class="card__name">Glow azul cyber</div><div class="card__vibe">Trazos luminosos, fondo casi negro.</div></div>
+      <div class="mod m-12"><div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 13 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">13 · soft dark</div><div class="card__name">Card moderno</div><div class="card__vibe">Bordes redondeados, acento azul.</div></div>
+      <div class="mod m-13">
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 14 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">14 · wireframe</div><div class="card__name">Línea pura</div><div class="card__vibe">Sin relleno, todo trazo. Visión técnica.</div></div>
+      <div class="mod m-14">
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 15 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">15 · DIN</div><div class="card__name">Amarillo industrial</div><div class="card__vibe">Cartel de obra, peligro, alta visibilidad.</div></div>
+      <div class="mod m-15">
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 16 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">16 · neón magenta</div><div class="card__name">Outline magenta</div><div class="card__vibe">Synthwave / cyberpunk.</div></div>
+      <div class="mod m-16">
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 17 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">17 · paper</div><div class="card__name">Sketch / papel</div><div class="card__vibe">Trazo dibujado a mano, beige.</div></div>
+      <div class="mod m-17">
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 18 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">18 · glass</div><div class="card__name">Frosted translúcido</div><div class="card__vibe">Cristal esmerilado. Estilo OS moderno.</div></div>
+      <div class="mod m-18">
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 19 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">19 · carbon</div><div class="card__name">Fibra de carbono</div><div class="card__vibe">Patrón diagonal sutil sobre negro.</div></div>
+      <div class="mod m-19"><div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 21 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">21 · metal recto</div><div class="card__name">Chasis industrial</div><div class="card__vibe">Cuadrado total, sin radios. Aluminio cepillado, cabecera oscura, tornillos avellanados.</div></div>
+      <div class="mod m-21"><div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 20 -->
+    <div class="card">
+      <div class="card__meta"><div class="card__num">20 · pastel</div><div class="card__name">Synth pastel</div><div class="card__vibe">Lila + amarillo. Playful, no-instrumento-serio.</div></div>
+      <div class="mod m-20"><div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+        <div class="mod__hd">VCO · OSC</div>
+        <div class="mod__bd">
+          <div class="row"><div class="knob"><div class="dial"></div><div class="lbl">FREQ</div><div class="val">220.0</div></div><div class="knob"><div class="dial"></div><div class="lbl">DETUNE</div><div class="val">+0.12</div></div></div>
+          <div class="screen">SR 48.0k</div>
+          <div class="jacks"><div class="jack"><div class="jack__r"></div><div class="jack__l">CV</div></div><div class="jack"><div class="jack__r"></div><div class="jack__l">FM</div></div><div class="jack"><div class="jack__r out"></div><div class="jack__l">OUT</div></div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

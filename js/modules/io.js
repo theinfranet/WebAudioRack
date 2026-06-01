@@ -42,7 +42,6 @@ class Scope extends Module {
     for (let y = 0; y <= h; y += h / 4) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
 
     ctx.strokeStyle = "#2ee6a6"; ctx.lineWidth = 1.6;
-    ctx.shadowColor = "#2ee6a6"; ctx.shadowBlur = 6;
     if (this.mode === "wave") {
       this.an.getByteTimeDomainData(this.timeBuf);
       ctx.beginPath();
@@ -57,14 +56,13 @@ class Scope extends Module {
     } else {
       this.an.getByteFrequencyData(this.freqBuf);
       const bars = 64, bw = w / bars;
+      ctx.fillStyle = "#2ee6a6";
       for (let i = 0; i < bars; i++) {
         const v = this.freqBuf[Math.floor(i / bars * this.freqBuf.length * 0.6)] / 255;
         const bh = v * (h - 4);
-        ctx.fillStyle = `hsl(${160 - v * 40} 80% ${40 + v * 30}%)`;
         ctx.fillRect(i * bw, h - bh, bw - 1, bh);
       }
     }
-    ctx.shadowBlur = 0;
   }
 }
 registerModule({ id: "scope", name: "Scope / Spectrum", cat: "Salida", desc: "Osciloscopio + espectro", make: (d) => new Scope(d) });
@@ -129,12 +127,10 @@ class Output extends Module {
     const { ctx, w, h } = this.meter;
     const l = Math.min(1, this.rms(this.bufL, this.anL) * 2.2);
     const r = Math.min(1, this.rms(this.bufR, this.anR) * 2.2);
-    ctx.clearRect(0, 0, w, h); ctx.fillStyle = "#060a08"; ctx.fillRect(0, 0, w, h);
+    ctx.clearRect(0, 0, w, h); ctx.fillStyle = "#050505"; ctx.fillRect(0, 0, w, h);
     const bar = (y, v) => {
-      const grad = ctx.createLinearGradient(0, 0, w, 0);
-      grad.addColorStop(0, "#2ee6a6"); grad.addColorStop(0.7, "#ffd23d"); grad.addColorStop(1, "#ff4d5e");
-      ctx.fillStyle = grad; ctx.fillRect(2, y, (w - 4) * v, 9);
-      ctx.strokeStyle = "rgba(255,255,255,.1)"; ctx.strokeRect(2, y, w - 4, 9);
+      ctx.fillStyle = "#2ee6a6";
+      ctx.fillRect(2, y, (w - 4) * v, 9);
     };
     bar(3, l); bar(14, r);
   }

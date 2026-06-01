@@ -302,6 +302,10 @@ class PatchBay {
   // (los cables NO se redibujan por frame: al hacer pan/zoom se mueven con
   //  el transform de la superficie; solo se redibujan al mover un módulo)
   _loop() {
+    // setInterval en vez de rAF: rAF se throttea a ~1Hz cuando la pestana esta
+    // en segundo plano, pero setInterval sigue al ritmo normal si el AudioContext
+    // esta activo (excepcion DAW de Chrome/FF). Asi los LEDs siguen vivos
+    // aunque el usuario tenga otra ventana al frente.
     const tick = () => {
       for (const port of this.ports.values()) {
         if (!port.isOutput() || !port.actLed) continue;
@@ -309,9 +313,8 @@ class PatchBay {
         const lit = lvl > 0.003 ? Math.min(1, 0.15 + lvl * 1.6) : 0;
         port.actLed.style.setProperty("--lit", lit.toFixed(3));
       }
-      requestAnimationFrame(tick);
     };
-    requestAnimationFrame(tick);
+    setInterval(tick, 33); // ~30 Hz, suficiente para LEDs
   }
 }
 

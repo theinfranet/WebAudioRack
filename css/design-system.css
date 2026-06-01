@@ -5,15 +5,15 @@
 
 :root {
   /* --- Paleta (negra, neutra, sin azul) --- */
-  --bg-app: #040404;
-  --bg-rack: #080808;
+  --bg-app: #000;
+  --bg-rack: #030303;
   --bg-rail: #000;
 
-  --panel-1: #111111;
-  --panel-2: #151515;
-  --panel-edge: #242424;
+  --panel-1: #0a0a0a;
+  --panel-2: #0d0d0d;
+  --panel-edge: #1a1a1a;
   --panel-line: #000;
-  --panel-screw: #393939;
+  --panel-screw: #2a2a2a;
 
   --ink: #e2e2e2;
   --ink-dim: #8a8a8a;
@@ -28,8 +28,8 @@
   --metal-dark: #444444;
 
   /* --- Tipografía --- */
-  --font-ui: "Inter", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "SFMono-Regular", ui-monospace, monospace;
+  --font-ui: "Space Mono", "SFMono-Regular", ui-monospace, monospace;
+  --font-mono: "Space Mono", "SFMono-Regular", ui-monospace, monospace;
 
   /* --- Métricas eurorack (cuadrado) --- */
   --hp: 16px;
@@ -58,7 +58,6 @@ body {
   height: var(--module-h);          /* todas las filas, misma altura */
   background: var(--panel-1);
   border: 1px solid var(--panel-edge);
-  border-top-color: #2e2e2e;
   border-radius: var(--radius);
   box-shadow: var(--shadow-panel);
   user-select: none;
@@ -66,7 +65,7 @@ body {
   flex-direction: column;
   z-index: 2;
 }
-.module.selected { outline: 1px solid var(--accent); outline-offset: 1px; }
+.module.selected { outline: 1px solid var(--metal-dark); outline-offset: 1px; }
 
 .module__header {
   display: flex;
@@ -370,20 +369,19 @@ body {
 }
 .fader__fill {
   position: absolute; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(180deg, rgba(54,211,154,.35), rgba(54,211,154,.12));
+  background: #1a1a1a;
   border-radius: 4px;
 }
 .fader__thumb {
   position: absolute; left: 50%; bottom: 0;
   width: 22px; height: 13px;
-  background: linear-gradient(180deg, #3c3f47, #25272c);
+  background: #1e1e1e;
   border: 1px solid #000; border-radius: 2px;
   transform: translate(-50%, 50%);
-  box-shadow: 0 1px 2px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.06);
 }
 .fader__thumb::after {
   content: ""; position: absolute; left: 4px; right: 4px; top: 50%;
-  height: 1px; background: rgba(255,255,255,.18);
+  height: 1px; background: #2a2a2a;
 }
 
 .tiny-label {

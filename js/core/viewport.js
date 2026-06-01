@@ -22,6 +22,10 @@ const Viewport = {
     this.grid = document.getElementById("gridLayer");
     rack.addEventListener("wheel", (e) => this._wheel(e), { passive: false });
     rack.addEventListener("mousedown", (e) => this._down(e));
+    // pan con botón medio: funciona en cualquier zona, también sobre módulos/jacks
+    rack.addEventListener("mousedown", (e) => this._middleDown(e), true);
+    // evita el cursor de auto-scroll del navegador con el botón medio
+    rack.addEventListener("auxclick", (e) => { if (e.button === 1) e.preventDefault(); });
     this._apply();         // estado inicial inmediato (no espera al rAF)
     this._loop();
   },
@@ -48,6 +52,27 @@ const Viewport = {
     this.tPanX = px - wx * newZoom;
     this.tPanY = py - wy * newZoom;
     this.tZoom = newZoom;
+  },
+
+  // ---- pan con botón medio: en cualquier parte (incluso sobre módulos) ----
+  _middleDown(e) {
+    if (e.button !== 1) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const sx = e.clientX, sy = e.clientY, px = this.tPanX, py = this.tPanY;
+    this.rack.classList.add("panning");
+    const prevCursor = document.body.style.cursor;
+    document.body.style.cursor = "grabbing";
+    const move = (ev) => { this.tPanX = px + (ev.clientX - sx); this.tPanY = py + (ev.clientY - sy); };
+    const up = (ev) => {
+      if (ev.button !== undefined && ev.button !== 1) return;
+      this.rack.classList.remove("panning");
+      document.body.style.cursor = prevCursor;
+      window.removeEventListener("mousemove", move, true);
+      window.removeEventListener("mouseup", up, true);
+    };
+    window.addEventListener("mousemove", move, true);
+    window.addEventListener("mouseup", up, true);
   },
 
   // ---- arrastrar espacio vacío para hacer pan ----

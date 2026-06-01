@@ -17,8 +17,45 @@ class AudioEngine {
     this.ctx = new AC({ latencyHint: "interactive" });
     this.master = this.ctx.createGain();
     this.master.gain.value = 0.9;
+    // --- taps de medición (no afectan al grafo de salida) ---
+    this.masterAnalyser = this.ctx.createAnalyser();
+    this.masterAnalyser.fftSize = 1024;
+    this.masterAnalyser.smoothingTimeConstant = 0.6;
+    this.master.connect(this.masterAnalyser);
+    this.masterSplit = this.ctx.createChannelSplitter(2);
+    this.master.connect(this.masterSplit);
+    this.anL = this.ctx.createAnalyser(); this.anL.fftSize = 512; this.anL.smoothingTimeConstant = 0.2;
+    this.anR = this.ctx.createAnalyser(); this.anR.fftSize = 512; this.anR.smoothingTimeConstant = 0.2;
+    try { this.masterSplit.connect(this.anL, 0); this.masterSplit.connect(this.anR, 1); } catch (e) {}
+    this._meterL = new Float32Array(this.anL.fftSize);
+    this._meterR = new Float32Array(this.anR.fftSize);
+    this._spec   = new Uint8Array(this.masterAnalyser.frequencyBinCount);
     this.master.connect(this.ctx.destination);
     return this.ctx;
+  }
+
+  /** Mide el master: devuelve {peakL, peakR, rmsL, rmsR}. */
+  meter() {
+    if (!this.anL) return { peakL: 0, peakR: 0, rmsL: 0, rmsR: 0 };
+    this.anL.getFloatTimeDomainData(this._meterL);
+    this.anR.getFloatTimeDomainData(this._meterR);
+    let pl = 0, pr = 0, sl = 0, sr = 0;
+    const N = this._meterL.length;
+    for (let i = 0; i < N; i++) {
+      const a = Math.abs(this._meterL[i]); if (a > pl) pl = a; sl += this._meterL[i] * this._meterL[i];
+      const b = Math.abs(this._meterR[i]); if (b > pr) pr = b; sr += this._meterR[i] * this._meterR[i];
+    }
+    return {
+      peakL: Math.min(1, pl), peakR: Math.min(1, pr),
+      rmsL: Math.sqrt(sl / N), rmsR: Math.sqrt(sr / N),
+    };
+  }
+
+  /** Espectro del master (Uint8Array 0..255 reutilizado). */
+  spectrum() {
+    if (!this.masterAnalyser) return null;
+    this.masterAnalyser.getByteFrequencyData(this._spec);
+    return this._spec;
   }
 
   async resume() {

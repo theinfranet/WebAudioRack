@@ -38,8 +38,12 @@ const Rack = {
     this.modules.push(mod);
     this.bringToFront(mod.el);
 
-    if (pos) Layout.place(mod, pos.x, pos.y);
-    else Layout.placeNew(mod);
+    if (pos) {
+      // Si nos dan una posición (p. ej. la del cursor) intentamos colocar
+      // el módulo en el hueco libre más cercano de la fila apuntada.
+      // Si no cabe en ninguna fila, caemos al comportamiento anterior.
+      if (!Layout.placeAt(mod, pos.x, pos.y)) Layout.placeNew(mod);
+    } else Layout.placeNew(mod);
     return mod;
   },
 

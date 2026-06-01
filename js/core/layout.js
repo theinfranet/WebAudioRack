@@ -49,6 +49,55 @@ const Layout = {
     this.resolve(row, mod);
   },
 
+  /**
+   * Coloca un módulo cerca de las coordenadas del mundo (x,y), buscando el
+   * hueco libre más cercano dentro de la fila apuntada por el cursor.
+   * Si la fila está llena, va probando filas alternas (arriba/abajo).
+   * Devuelve true si encontró sitio sin empujar a nadie; false si no.
+   */
+  placeAt(mod, x, y) {
+    const w = this.W(mod);
+    const startRow = this.snapRow(y);
+    const desired = this.snapX(x - w / 2);
+
+    const tryRow = (row) => {
+      const inRow = this.modulesInRow(row, mod).slice().sort((a, b) => this.L(a) - this.L(b));
+      // Construir lista de huecos libres en la fila.
+      const gaps = [];
+      let prev = null;
+      for (const m of inRow) {
+        const gapStart = prev === null ? 0 : this.R(prev) + this.GAP;
+        const gapEnd = this.L(m) - this.GAP;
+        if (gapEnd - gapStart >= w) gaps.push({ start: gapStart, end: gapEnd });
+        prev = m;
+      }
+      const tailStart = prev === null ? 0 : this.R(prev) + this.GAP;
+      gaps.push({ start: tailStart, end: tailStart + this.SURF_W });
+
+      // Hueco más cercano a la posición deseada.
+      let bestX = null, bestD = Infinity;
+      for (const g of gaps) {
+        if (g.end - g.start < w) continue;
+        const clamped = Math.max(g.start, Math.min(g.end - w, desired));
+        const d = Math.abs(clamped - desired);
+        if (d < bestD) { bestD = d; bestX = clamped; }
+      }
+      if (bestX === null) return false;
+      mod.__row = row;
+      mod.el.style.left = this.snapX(bestX) + "px";
+      mod.el.style.top = row + "px";
+      return true;
+    };
+
+    if (tryRow(startRow)) return true;
+    // Fila llena: probar filas vecinas alternando.
+    for (let k = 1; k < 24; k++) {
+      if (tryRow(startRow + k * this.ROW_H)) return true;
+      if (tryRow(startRow - k * this.ROW_H)) return true;
+    }
+    return false;
+  },
+
   /** Coloca un módulo nuevo en el primer hueco libre desde el origen. */
   placeNew(mod) {
     const w = this.W(mod);

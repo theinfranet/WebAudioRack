@@ -11,12 +11,26 @@
   Patch.mount(surface, svg);
   Viewport.mount(document.querySelector(".rack"), surface);
 
-  // ---------- menú "Añadir módulo" (modal: buscador + lista/tarjetas) ----------
+  // ---------- menú "Añadir módulo" ----------
   const menu = document.getElementById("addMenu");
   const backdrop = document.getElementById("addBackdrop");
   const addBtn = document.getElementById("addBtn");
-  let view = "list";   // "list" | "cards"
+  const rackEl = document.querySelector(".rack");
+  let view = "list";
   let firstMatch = null;
+
+  let lastCursorWorld = null;
+  let spawnAt = null;
+  function cursorToWorld(clientX, clientY) {
+    const r = Viewport.rack.getBoundingClientRect();
+    return {
+      x: (clientX - r.left - Viewport.panX) / Viewport.zoom,
+      y: (clientY - r.top - Viewport.panY) / Viewport.zoom,
+    };
+  }
+  rackEl.addEventListener("mousemove", (e) => {
+    lastCursorWorld = cursorToWorld(e.clientX, e.clientY);
+  });
 
   menu.innerHTML = `
     <div class="add-menu__head">
@@ -63,7 +77,7 @@
       matches.filter((m) => m.cat === cat).forEach((m) => {
         const item = view === "cards" ? cardEl(m) : rowEl(m);
         if (m === firstMatch) item.classList.add("focus");
-        item.addEventListener("click", () => { Rack.add(m.id); closeMenu(); });
+        item.addEventListener("click", () => { Rack.add(m.id, spawnAt); closeMenu(); });
         list.appendChild(item);
       });
     });
@@ -79,31 +93,42 @@
   });
   search.addEventListener("input", renderModules);
   search.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); if (firstMatch) { Rack.add(firstMatch.id); closeMenu(); } }
+    if (e.key === "Enter") { e.preventDefault(); if (firstMatch) { Rack.add(firstMatch.id, spawnAt); closeMenu(); } }
     else if (e.key === "Escape") closeMenu();
   });
 
-  function openMenu() {
+  function openMenu(originEvent) {
+    if (originEvent && typeof originEvent.clientX === "number") {
+      spawnAt = cursorToWorld(originEvent.clientX, originEvent.clientY);
+    } else {
+      spawnAt = lastCursorWorld;
+    }
     menu.classList.add("open"); backdrop.classList.add("show");
     search.value = ""; renderModules();
     setTimeout(() => search.focus(), 0);
   }
   function closeMenu() { menu.classList.remove("open"); backdrop.classList.remove("show"); }
-  function toggleMenu() { menu.classList.contains("open") ? closeMenu() : openMenu(); }
+  function toggleMenu(originEvent) { menu.classList.contains("open") ? closeMenu() : openMenu(originEvent); }
 
   addBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleMenu(); });
   backdrop.addEventListener("click", closeMenu);
+
+  rackEl.addEventListener("dblclick", (e) => {
+    if (e.target.closest(".module") || e.target.closest(".jack") || e.target.closest(".cable")) return;
+    if (e.target.closest(".zoom-bar")) return;
+    e.preventDefault();
+    if (menu.classList.contains("open")) return;
+    openMenu(e);
+  });
   window.addEventListener("keydown", (e) => {
     const t = e.target.tagName;
     const typing = (t === "INPUT" || t === "TEXTAREA");
-    // Espacio = ON/OFF de la cabecera (siempre, salvo escribiendo en el buscador)
     if (e.code === "Space" && !typing) {
       e.preventDefault();
       if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
       togglePower();
       return;
     }
-    // borrar el módulo seleccionado
     if ((e.key === "Delete" || e.key === "Backspace") && !typing) {
       if (Rack.selected) { e.preventDefault(); Rack.selected.dispose(); return; }
     }
@@ -121,12 +146,51 @@
   smoothBtn.addEventListener("click", () => { Viewport.smooth = !Viewport.smooth; updateSmooth(); });
   updateSmooth();
 
+  // ---------- zoom bar ----------
+  const zoomTrack = document.getElementById("zoomTrack");
+  const zoomFill = document.getElementById("zoomFill");
+  const zoomThumb = document.getElementById("zoomThumb");
+  const zoomValue = document.getElementById("zoomValue");
+  const zoomTtoZ = (t) => Viewport.min * Math.pow(Viewport.max / Viewport.min, t);
+  const zoomZtoT = (z) => Math.log(z / Viewport.min) / Math.log(Viewport.max / Viewport.min);
+  function refreshZoomBar() {
+    const t = Math.max(0, Math.min(1, zoomZtoT(Viewport.zoom)));
+    const pct = (t * 100).toFixed(2) + "%";
+    zoomThumb.style.bottom = pct;
+    zoomFill.style.height = pct;
+    zoomValue.textContent = Math.round(Viewport.zoom * 100) + "%";
+  }
+  function zoomFromY(clientY) {
+    const r = zoomTrack.getBoundingClientRect();
+    const t = 1 - Math.max(0, Math.min(1, (clientY - r.top) / r.height));
+    Viewport.zoomTo(zoomTtoZ(t));
+  }
+  zoomTrack.addEventListener("mousedown", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    zoomFromY(e.clientY);
+    const move = (ev) => zoomFromY(ev.clientY);
+    const up = () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  });
+  zoomTrack.addEventListener("wheel", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const factor = Math.exp(-e.deltaY * 0.0016);
+    const r = zoomTrack.getBoundingClientRect();
+    Viewport._zoomAt(r.left + r.width / 2, r.top + r.height / 2, Viewport.tZoom * factor);
+  }, { passive: false });
+  setInterval(refreshZoomBar, 60);
+  refreshZoomBar();
+
   // ---------- tensión de cables ----------
   const tension = document.getElementById("tension");
   tension.addEventListener("input", () => { Patch.tension = parseInt(tension.value, 10) / 100; });
   Patch.tension = parseInt(tension.value, 10) / 100;
 
-  // ---------- color de cables (cajón de cables, desplegable) ----------
+  // ---------- cajón de cables ----------
   const cableBtn = document.getElementById("cableBtn");
   const cableMenu = document.getElementById("cableMenu");
   const cableList = document.getElementById("cableList");
@@ -142,7 +206,6 @@
   ];
   let current = null;
 
-  // cable horizontal con puntas/plug realistas (como en un cajón de cables)
   function cableSVG(color, auto, gid) {
     const fill = auto ? `url(#${gid})` : color;
     const defs = auto ? `<defs><linearGradient id="${gid}" x1="0" x2="1">
@@ -171,7 +234,7 @@
     opt.addEventListener("click", () => selectCable(p.c, opt));
     cableList.appendChild(opt);
   });
-  cableList.firstChild.classList.add("active"); // auto por defecto
+  cableList.firstChild.classList.add("active");
 
   cablePick.addEventListener("input", () => selectCable(cablePick.value, null));
   applyAll.addEventListener("click", () => Patch.recolorAll(current));
@@ -181,7 +244,7 @@
     if (!cableMenu.contains(e.target) && !cableBtn.contains(e.target)) cableMenu.classList.remove("open");
   });
 
-  // ---------- power (on/off de la cabecera) ----------
+  // ---------- power ----------
   const power = document.getElementById("power");
   async function togglePower() {
     if (!Engine.started) { await Engine.resume(); power.classList.add("on"); power.textContent = "● ON"; }
@@ -189,20 +252,116 @@
   }
   power.addEventListener("click", togglePower);
 
-  // ---------- status ----------
-  const st = document.getElementById("status");
-  setInterval(() => {
-    st.innerHTML = `SR <b>${(Engine.sampleRate / 1000).toFixed(1)}k</b> · estado <b>${Engine.ctx.state}</b> · módulos <b>${Rack.modules.length}</b> · cables <b>${Patch.cables.length}</b>`;
-  }, 400);
+  // ---------- panel de performance (driven by setInterval para sobrevivir background) ----------
+  const perfState  = document.getElementById("perfState");
+  const perfSR     = document.getElementById("perfSR");
+  const perfLat    = document.getElementById("perfLat");
+  const perfFrame  = document.getElementById("perfFrame");
+  const perfClock  = document.getElementById("perfClock");
+  const perfGraph  = document.getElementById("perfGraph");
+  const perfRmsL   = document.getElementById("perfRmsL");
+  const perfRmsR   = document.getElementById("perfRmsR");
+  const perfPkL    = document.getElementById("perfPkL");
+  const perfPkR    = document.getElementById("perfPkR");
+  const perfDbL    = document.getElementById("perfDbL");
+  const perfDbR    = document.getElementById("perfDbR");
+  const specCv     = document.getElementById("perfSpec");
+  const specCtx2d  = specCv.getContext("2d");
 
-  // ---------- patch inicial de ejemplo ----------
+  const toDB = (v) => (v <= 0.0001 ? -Infinity : 20 * Math.log10(v));
+  const dbToPct = (db) => Math.max(0, Math.min(1, (db + 60) / 60)) * 100;
+
+  let hpL = 0, hpR = 0;
+  let lastTickT = performance.now(), tickAvg = 33;
+  let lastAudioT = 0, lastWallT = 0, driftMs = 0;
+  const stateClass = { running: "run", suspended: "susp", closed: "closed" };
+
+  function perfTick() {
+    const now = performance.now();
+    const dt = now - lastTickT; lastTickT = now;
+    if (dt < 500) tickAvg = tickAvg * 0.85 + dt * 0.15;
+
+    const actx = Engine.ctx;
+    if (actx) {
+      const stt = actx.state;
+      perfState.textContent = stt.toUpperCase();
+      perfState.className = "perf-pill " + (stateClass[stt] || "");
+      perfSR.textContent = (actx.sampleRate / 1000).toFixed(1) + " kHz";
+      const base = (actx.baseLatency || 0) * 1000;
+      const outL = (actx.outputLatency || 0) * 1000;
+      perfLat.textContent = (base + outL).toFixed(1) + " ms";
+      perfClock.textContent = actx.currentTime.toFixed(2) + " s";
+
+      // DRIFT: comparacion entre el reloj de audio y el wallclock.
+      // ~0ms = sin glitches; positivo = el audio se quedo atras (xrun).
+      if (stt === "running" && lastAudioT > 0) {
+        const audioAdv = (actx.currentTime - lastAudioT) * 1000;
+        const wallAdv = now - lastWallT;
+        if (wallAdv < 500) {
+          const d = wallAdv - audioAdv;
+          driftMs = driftMs * 0.8 + d * 0.2;
+        }
+      }
+      lastAudioT = actx.currentTime;
+      lastWallT = now;
+    }
+    perfFrame.textContent = tickAvg.toFixed(1) + " / " + (driftMs >= 0 ? "+" : "") + driftMs.toFixed(1) + " ms";
+    perfFrame.style.color = Math.abs(driftMs) > 5 ? "var(--danger)" : "";
+    perfGraph.textContent = Rack.modules.length + " mod · " + Patch.cables.length + " cbl";
+
+    const m = Engine.meter ? Engine.meter() : { peakL: 0, peakR: 0, rmsL: 0, rmsR: 0 };
+    hpL = Math.max(m.peakL, hpL * 0.92);
+    hpR = Math.max(m.peakR, hpR * 0.92);
+    perfRmsL.style.width = dbToPct(toDB(m.rmsL)) + "%";
+    perfRmsR.style.width = dbToPct(toDB(m.rmsR)) + "%";
+    perfPkL.style.left   = dbToPct(toDB(hpL)) + "%";
+    perfPkR.style.left   = dbToPct(toDB(hpR)) + "%";
+    const fmt = (v) => v <= 0.0005 ? "-inf" : (toDB(v) >= 0 ? "+" : "") + toDB(v).toFixed(1);
+    perfDbL.textContent = fmt(hpL);
+    perfDbR.textContent = fmt(hpR);
+    perfDbL.style.color = hpL >= 0.98 ? "var(--danger)" : "";
+    perfDbR.style.color = hpR >= 0.98 ? "var(--danger)" : "";
+
+    // Espectro: solo si visible (en background el navegador no compositea igual)
+    if (!document.hidden) {
+      const sp = Engine.spectrum ? Engine.spectrum() : null;
+      const W = specCv.width, H = specCv.height;
+      specCtx2d.clearRect(0, 0, W, H);
+      specCtx2d.fillStyle = "#060a08"; specCtx2d.fillRect(0, 0, W, H);
+      if (sp) {
+        const bars = 56, bw = W / bars, bins = sp.length;
+        for (let i = 0; i < bars; i++) {
+          const t0 = i / bars, t1 = (i + 1) / bars;
+          const lo = Math.floor(Math.pow(bins, t0));
+          const hi = Math.max(lo + 1, Math.floor(Math.pow(bins, t1)));
+          let max = 0;
+          for (let k = lo; k < hi && k < bins; k++) if (sp[k] > max) max = sp[k];
+          const v = max / 255;
+          const bh = v * (H - 2);
+          specCtx2d.fillStyle = v < 0.65 ? "#36d39a" : (v < 0.85 ? "#ffd23d" : "#ff4d5e");
+          specCtx2d.fillRect(i * bw, H - bh, Math.max(1, bw - 1), bh);
+        }
+      }
+    }
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      lastTickT = performance.now();
+      lastWallT = lastTickT;
+      lastAudioT = Engine.ctx ? Engine.ctx.currentTime : 0;
+    }
+  });
+
+  setInterval(perfTick, 33);
+
+  // ---------- patch inicial ----------
   const vco = Rack.add("vco");
   const vcf = Rack.add("vcf");
   const scope = Rack.add("scope");
   const out = Rack.add("output");
   const mix = Rack.add("mix4");
 
-  // cablear ejemplo: VCO -> VCF -> SCOPE -> OUTPUT
   const oOut = vco.ports.find((p) => p.dir === "out");
   const fIn = vcf.ports.find((p) => p.dir === "in" && p.label === "IN");
   const fOut = vcf.ports.find((p) => p.dir === "out");
@@ -213,7 +372,6 @@
   Patch.connect(fOut, sIn);
   Patch.connect(sThru, oIn);
 
-  // centrar la vista en el patch inicial
   const xs = [], ys = [];
   Rack.modules.forEach((m) => {
     xs.push(Layout.L(m), Layout.R(m));
@@ -222,7 +380,6 @@
   });
   Viewport.centerOn((Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2, true);
 
-  // pista
   const hint = document.getElementById("hint");
   setTimeout(() => hint && (hint.style.opacity = "0"), 9000);
 })();
