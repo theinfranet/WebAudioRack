@@ -8,7 +8,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <!-- Cargamos varios kits a la vez para poder compararlos en pantalla -->
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;700&family=Chivo:wght@400;600;800&family=Chivo+Mono:wght@400;600&family=Saira+Semi+Condensed:wght@400;600;800&family=Saira+Condensed:wght@400;600;800&family=JetBrains+Mono:wght@400;600&family=Archivo:wght@400;600;800&family=Archivo+Narrow:wght@400;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/page-transition.css" />
   <style>
     :root {
       --bg-app: #000;
@@ -580,6 +579,5 @@
     </div>
   </section>
 
-  <script src="js/smooth-scroll.js" defer></script>
 </body>
 </html>

@@ -6,7 +6,6 @@
   <title>WebAudioRack — 20 estilos base de módulo</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/page-transition.css" />
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; background: #050505; color: #e2e2e2;
@@ -669,6 +668,5 @@
     </div>
 
   </div>
-  <script src="js/smooth-scroll.js" defer></script>
 </body>
 </html>
